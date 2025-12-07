@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Job } from "@/types/job";
 import { superlikeJob, getSuperlikedJobs } from "@/lib/swipes";
 import { Loader2, Heart, X, MapPin, Building2, Briefcase, ExternalLink, RotateCcw, Star, Home } from "lucide-react";
-import { JobSwipeScreen } from "@/components/swipe/JobSwipeScreen";
+import { JobSwipeScreen } from "@/components/swipe";
 import { OfferDetailModal } from "@/components/OfferDetailModal";
 
 interface OffresProps {
