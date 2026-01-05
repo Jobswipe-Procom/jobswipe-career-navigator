@@ -3,6 +3,15 @@ import App from "./App";
 import "./index.css";
 import { bootstrapSupabaseAuth } from "./lib/authBootstrap";
 
+// Hotfix GitHub Pages + HashRouter: Supabase OAuth returns "#/#access_token=..."
+(() => {
+  const h = window.location.hash || "";
+  if (h.startsWith("#/#access_token=") || h.startsWith("#/#error=")) {
+    const fixed = "#" + h.slice(3); // remove "/#" after the first "#"
+    window.history.replaceState(null, "", window.location.pathname + window.location.search + fixed);
+  }
+})();
+
 // Enregistrement du Service Worker pour la PWA
 // Ce code s'exécute uniquement côté client (navigateur)
 // 

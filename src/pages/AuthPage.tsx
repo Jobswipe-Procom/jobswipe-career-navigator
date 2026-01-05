@@ -152,7 +152,7 @@ const AuthPage = () => {
     setGoogleLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/`;
+      const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
