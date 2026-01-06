@@ -36,27 +36,67 @@ export const JobCard = React.memo(({
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-15, 15]);
   const swipeDirectionRef = useRef<"left" | "right" | null>(null);
-  const hasDraggedRef = useRef<boolean>(false);
+  const wasDraggedRef = useRef<boolean>(false);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const tapBlockedRef = useRef<boolean>(false);
+  const tapBlockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pressStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const pressedRef = useRef<boolean>(false);
   
   // Réinitialiser la position quand l'offre change
   useEffect(() => {
     x.set(0);
     swipeDirectionRef.current = null;
-    hasDraggedRef.current = false;
+    wasDraggedRef.current = false;
+    dragStartPosRef.current = null;
+    tapBlockedRef.current = false;
+    pressStartRef.current = null;
+    pressedRef.current = false;
+    if (tapBlockTimeoutRef.current) {
+      clearTimeout(tapBlockTimeoutRef.current);
+      tapBlockTimeoutRef.current = null;
+    }
+    
+    // Cleanup au démontage
+    return () => {
+      if (tapBlockTimeoutRef.current) {
+        clearTimeout(tapBlockTimeoutRef.current);
+        tapBlockTimeoutRef.current = null;
+      }
+    };
   }, [offer.id, x]);
   
   // Opacité des overlays basée sur la position x
   const likeOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
   const nopeOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
 
-  const handleDragStart = () => {
-    hasDraggedRef.current = false;
+  const blockTap = () => {
+    tapBlockedRef.current = true;
+    if (tapBlockTimeoutRef.current) {
+      clearTimeout(tapBlockTimeoutRef.current);
+    }
+    tapBlockTimeoutRef.current = setTimeout(() => {
+      tapBlockedRef.current = false;
+      tapBlockTimeoutRef.current = null;
+    }, 200);
+  };
+
+  const handleDragStart = (_event: any, info: any) => {
+    wasDraggedRef.current = false;
+    dragStartPosRef.current = { x: info.point.x, y: info.point.y };
+    pressedRef.current = false; // Cancel tap when drag starts
   };
 
   const handleDrag = (_event: any, info: any) => {
-    // Marquer qu'on a dragué si le mouvement est significatif (> 8px)
-    if (Math.abs(info.offset.x) > 8) {
-      hasDraggedRef.current = true;
+    // Seuil tap strict : < 6px (dx<6 ET dy<6)
+    if (dragStartPosRef.current) {
+      const dx = Math.abs(info.point.x - dragStartPosRef.current.x);
+      const dy = Math.abs(info.point.y - dragStartPosRef.current.y);
+      // Si le mouvement dépasse 6px dans n'importe quelle direction, c'est un drag
+      if (dx >= 6 || dy >= 6) {
+        wasDraggedRef.current = true;
+        blockTap(); // Bloquer le tap dès qu'un drag est détecté
+      }
     }
   };
 
@@ -64,25 +104,21 @@ export const JobCard = React.memo(({
     const offsetX = info.offset.x;
     const velocityX = info.velocity.x;
 
-    // Si on n'a pas vraiment dragué, c'est un tap
-    if (!hasDraggedRef.current && Math.abs(offsetX) < 15 && Math.abs(velocityX) < 200) {
-      if (onOpenDetails) {
-        requestAnimationFrame(() => {
-          onOpenDetails();
-        });
-      }
-      hasDraggedRef.current = false;
-      return;
+    // Si Math.abs(offsetX) > 10 OU Math.abs(velocityX) > 50, considérer que c'est un drag
+    if (Math.abs(offsetX) > 10 || Math.abs(velocityX) > 50) {
+      blockTap(); // Empêcher toute ouverture de modal
     }
 
     // Déclencher un like si swipe vers la droite (offsetX > 120 ou velocityX > 500)
     if (offsetX > SWIPE_THRESHOLD || velocityX > VELOCITY_THRESHOLD) {
       swipeDirectionRef.current = "right";
+      blockTap(); // Bloquer le tap quand un swipe est déclenché
       onSwipeRight();
     }
     // Déclencher un dislike si swipe vers la gauche (offsetX < -120 ou velocityX < -500)
     else if (offsetX < -SWIPE_THRESHOLD || velocityX < -VELOCITY_THRESHOLD) {
       swipeDirectionRef.current = "left";
+      blockTap(); // Bloquer le tap quand un swipe est déclenché
       onSwipeLeft();
     }
     // Sinon, la carte revient au centre avec une animation spring fluide
@@ -92,14 +128,46 @@ export const JobCard = React.memo(({
       // grâce à dragConstraints et dragElastic
     }
 
-    hasDraggedRef.current = false;
+    // Reset après un petit délai pour éviter un click fantôme
+    setTimeout(() => {
+      wasDraggedRef.current = false;
+      dragStartPosRef.current = null;
+    }, 0);
+    
+    pressedRef.current = false; // Cancel tap when drag ends
   };
 
-  const handleTap = () => {
-    // onTap ne se déclenche que si on n'a pas dragué
-    if (!hasDraggedRef.current && onOpenDetails) {
-      onOpenDetails();
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pressStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+    pressedRef.current = true;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pressedRef.current && pressStartRef.current) {
+      const dx = Math.abs(e.clientX - pressStartRef.current.x);
+      const dy = Math.abs(e.clientY - pressStartRef.current.y);
+      // If movement exceeds 6px in any direction, it's not a tap
+      if (dx > 6 || dy > 6) {
+        pressedRef.current = false;
+      }
     }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (pressedRef.current && pressStartRef.current) {
+      const timeElapsed = Date.now() - pressStartRef.current.t;
+      // If pressed is true, time < 250ms, and not blocked, open details
+      if (timeElapsed < 250 && !tapBlockedRef.current && onOpenDetails) {
+        onOpenDetails();
+      }
+    }
+    pressedRef.current = false;
+    pressStartRef.current = null;
+  };
+
+  const handlePointerCancel = () => {
+    pressedRef.current = false;
+    pressStartRef.current = null;
   };
 
   return (
@@ -113,7 +181,10 @@ export const JobCard = React.memo(({
           onDragStart={handleDragStart}
           onDrag={handleDrag}
           onDragEnd={handleDragEnd}
-          onTap={handleTap}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{
