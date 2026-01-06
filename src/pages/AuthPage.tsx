@@ -257,6 +257,16 @@ const AuthPage = () => {
                   minLength={6}
                   className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
                 />
+                {mode === "login" && (
+                  <div className="text-right">
+                    <a
+                      href="#/forgot-password"
+                      className="text-xs text-gray-medium hover:text-mint transition-colors duration-200"
+                    >
+                      Mot de passe oublié ?
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Champs spécifiques à l'inscription */}

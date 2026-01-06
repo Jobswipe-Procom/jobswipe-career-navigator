@@ -8,6 +8,8 @@ import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import AuthPage from "./pages/AuthPage";
 import AuthCallback from "./pages/AuthCallback";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import Profil from "./pages/Profil";
@@ -67,8 +69,10 @@ const App = () => {
         <Sonner />
         <HashRouter>
           <Routes>
-            {/* Route de callback OAuth - accessible sans session */}
+            {/* Routes publiques - accessibles sans session */}
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {authReady && session ? (
               <>
