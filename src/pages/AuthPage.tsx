@@ -172,22 +172,22 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-rose-400 via-pink-500 via-purple-500 to-indigo-600 relative overflow-hidden">
-      {/* Pattern overlay subtil */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.1),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.08),transparent_50%)] pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       <div className="relative z-10">
         <LogoHeader />
       </div>
       
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
-        <Card className="w-full max-w-md bg-white shadow-sm border border-gray-light rounded-2xl">
+        <Card className="w-full max-w-md bg-white shadow-xl border border-slate-100 rounded-2xl">
           <CardHeader className="text-center pb-6">
-            <CardTitle className="text-2xl font-semibold text-graphite">
+            <CardTitle className="text-2xl font-semibold text-slate-800">
               {mode === "login" ? "Connexion" : "Inscription"}
             </CardTitle>
-            <CardDescription className="text-gray-medium mt-2">
+            <CardDescription className="text-slate-500 mt-2">
               {mode === "login" 
                 ? "Connectez-vous à votre compte" 
                 : "Créez votre compte pour commencer"}
@@ -201,11 +201,11 @@ const AuthPage = () => {
                 type="button"
                 onClick={handleSignInWithGoogle}
                 disabled={loading || googleLoading}
-                className="w-full px-6 py-3 rounded-2xl border-2 border-gray-light bg-white text-gray-dark hover:bg-gray-50 hover:border-gray-medium transition-all duration-200 ease-out flex items-center justify-center gap-3 font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 rounded-2xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.02] cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-3 font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {googleLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-gray-medium border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
                     <span>Connexion en cours...</span>
                   </>
                 ) : (
@@ -220,17 +220,17 @@ const AuthPage = () => {
             {/* Séparateur */}
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-light"></div>
+                <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-medium">ou</span>
+                <span className="px-2 bg-white text-slate-400">ou</span>
               </div>
             </div>
 
             <form onSubmit={mode === "login" ? handleSignIn : handleSignUp} className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-medium">Email</Label>
+                <Label htmlFor="email" className="text-slate-600">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -239,13 +239,13 @@ const AuthPage = () => {
                   placeholder="votre@email.com"
                   required
                   disabled={loading}
-                  className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                  className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
 
               {/* Mot de passe */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-medium">Mot de passe</Label>
+                <Label htmlFor="password" className="text-slate-600">Mot de passe</Label>
                 <Input
                   id="password"
                   type="password"
@@ -255,7 +255,7 @@ const AuthPage = () => {
                   required
                   disabled={loading}
                   minLength={6}
-                  className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                  className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
 
@@ -264,7 +264,7 @@ const AuthPage = () => {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-gray-medium">Prénom</Label>
+                      <Label htmlFor="firstName" className="text-slate-600">Prénom</Label>
                       <Input
                         id="firstName"
                         type="text"
@@ -273,11 +273,11 @@ const AuthPage = () => {
                         placeholder="Jean"
                         required
                         disabled={loading}
-                        className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                        className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-gray-medium">Nom</Label>
+                      <Label htmlFor="lastName" className="text-slate-600">Nom</Label>
                       <Input
                         id="lastName"
                         type="text"
@@ -286,13 +286,13 @@ const AuthPage = () => {
                         placeholder="Dupont"
                         required
                         disabled={loading}
-                        className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                        className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-gray-medium">Ville</Label>
+                    <Label htmlFor="city" className="text-slate-600">Ville</Label>
                     <Input
                       id="city"
                       type="text"
@@ -301,12 +301,12 @@ const AuthPage = () => {
                       placeholder="Paris"
                       required
                       disabled={loading}
-                      className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                      className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="targetRole" className="text-gray-medium">Rôle ciblé</Label>
+                    <Label htmlFor="targetRole" className="text-slate-600">Rôle ciblé</Label>
                     <Input
                       id="targetRole"
                       type="text"
@@ -315,12 +315,12 @@ const AuthPage = () => {
                       placeholder="Développeur Full Stack"
                       required
                       disabled={loading}
-                      className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                      className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="experienceLevel" className="text-gray-medium">Niveau d'expérience</Label>
+                    <Label htmlFor="experienceLevel" className="text-slate-600">Niveau d'expérience</Label>
                     <Input
                       id="experienceLevel"
                       type="text"
@@ -329,7 +329,7 @@ const AuthPage = () => {
                       placeholder="Junior, Confirmé, Senior..."
                       required
                       disabled={loading}
-                      className="rounded-2xl border-gray-light focus:border-mint focus:ring-mint"
+                      className="rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
                 </>
@@ -346,7 +346,7 @@ const AuthPage = () => {
               <PrimaryButton 
                 type="submit" 
                 disabled={loading || googleLoading} 
-                className="w-full rounded-2xl bg-mint hover:bg-mint-dark text-white font-medium shadow-sm transition-all duration-200 ease-out disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer transition-all duration-200 ease-out disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -375,7 +375,7 @@ const AuthPage = () => {
                   setMode(mode === "login" ? "signup" : "login");
                   setError(null);
                 }}
-                className="text-sm text-gray-medium hover:text-mint transition-colors duration-200"
+                className="text-sm text-slate-500 hover:text-indigo-600 cursor-pointer transition-colors duration-200"
                 disabled={loading}
               >
                 {mode === "login" 
@@ -391,4 +391,3 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
-

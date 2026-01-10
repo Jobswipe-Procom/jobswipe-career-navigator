@@ -7,10 +7,10 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-rose-400 via-pink-500 via-purple-500 to-indigo-600 relative overflow-hidden">
-      {/* Pattern overlay subtil */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.1),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.08),transparent_50%)] pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       <div className="relative z-10">
         <LogoHeader />
@@ -19,25 +19,25 @@ const Index = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-2">Bienvenue</h2>
-            <p className="text-muted-foreground">Trouvez votre prochain emploi d'ingénieur</p>
+            <h2 className="text-4xl font-semibold text-slate-800 mb-3">Bienvenue</h2>
+            <p className="text-slate-600 text-lg">Trouvez votre prochain emploi d'ingénieur</p>
           </div>
 
           <div className="space-y-4">
             <PrimaryButton 
-              onClick={() => navigate("/profil")}
-              className="bg-foreground hover:bg-foreground/90"
+              onClick={() => navigate("/jobswipe/offres")}
+              className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-200 ease-out flex items-center justify-center gap-2 h-auto text-base"
             >
-              <User className="w-5 h-5 mr-2" />
-              Mon profil
+              <Briefcase className="w-5 h-5 mr-2" />
+              Commencer à swiper
             </PrimaryButton>
 
             <PrimaryButton 
-              onClick={() => navigate("/jobswipe/offres")}
-              className="bg-primary hover:bg-primary/90"
+              onClick={() => navigate("/profil")}
+              className="w-full px-6 py-4 rounded-2xl bg-white text-slate-700 font-medium shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all duration-200 ease-out flex items-center justify-center gap-2 h-auto text-base"
             >
-              <Briefcase className="w-5 h-5 mr-2" />
-              Jobswipe
+              <User className="w-5 h-5 mr-2 text-indigo-600" />
+              Mon profil
             </PrimaryButton>
           </div>
         </div>

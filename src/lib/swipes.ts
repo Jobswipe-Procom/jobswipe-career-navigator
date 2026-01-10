@@ -46,7 +46,6 @@ export async function superlikeJob(userId: string, jobId: string): Promise<void>
       throw new Error(`Erreur lors de l'enregistrement du superlike: ${error.message}`);
     }
 
-    console.log(`[superlikeJob] Successfully superliked job ${jobId} for user ${userId}`);
   } catch (err) {
     console.error("[superlikeJob] Unexpected error:", err);
     throw err;
@@ -76,7 +75,6 @@ export async function getSuperlikedJobs(userId: string): Promise<Job[]> {
     }
 
     if (!swipesData || swipesData.length === 0) {
-      console.log("[getSuperlikedJobs] No superliked swipes found");
       return [];
     }
 
@@ -119,11 +117,9 @@ export async function getSuperlikedJobs(userId: string): Promise<Job[]> {
       return new Date(bSwipe.created_at).getTime() - new Date(aSwipe.created_at).getTime();
     });
 
-    console.log(`[getSuperlikedJobs] Loaded ${sortedJobs.length} superliked jobs for user ${userId}`);
     return sortedJobs;
   } catch (err) {
     console.error("[getSuperlikedJobs] Unexpected error:", err);
     throw err;
   }
 }
-

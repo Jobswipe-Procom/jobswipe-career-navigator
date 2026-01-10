@@ -20,13 +20,11 @@ export const OfferDetailModal = ({
   if (!isOpen || !offer) return null;
 
   const handleGenerateCV = () => {
-    console.log("Génération du CV pour l'offre :", offer.id);
     alert("Génération du CV lancée !");
     // TODO: Appeler votre backend ici
   };
 
   const handleGenerateCoverLetter = () => {
-    console.log("Génération de la Lettre de Motivation pour l'offre :", offer.id);
     alert("Génération de la Lettre de Motivation lancée !");
     // TODO: Appeler votre backend ici
   };
@@ -88,14 +86,14 @@ export const OfferDetailModal = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleGenerateCV}
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 hover:scale-105 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <FileText className="w-5 h-5" />
                 Générer CV adapté
               </button>
               <button
                 onClick={handleGenerateCoverLetter}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md"
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700 hover:scale-105 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <PenTool className="w-5 h-5" />
                 Générer Lettre de Motiv.
@@ -107,7 +105,7 @@ export const OfferDetailModal = ({
           <div className="pt-2">
             <button
               onClick={() => window.open(offer.redirect_url, "_blank")}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 hover:scale-[1.02] cursor-pointer transition-all duration-200"
             >
               <ExternalLink className="w-4 h-4" />
               Voir l'offre originale

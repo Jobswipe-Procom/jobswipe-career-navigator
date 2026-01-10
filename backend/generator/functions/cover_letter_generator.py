@@ -45,7 +45,6 @@ import google.generativeai as genai
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx2pdf import convert
 from pyhere import here
 
 load_dotenv()
@@ -56,6 +55,11 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    raise ImportError("La librairie 'xhtml2pdf' est manquante. Installez-la avec : pip install xhtml2pdf")
 
 genai.configure(api_key=GEMINI_API_KEY)
 _gemini_model = genai.GenerativeModel(GEMINI_MODEL_NAME)
@@ -90,18 +94,45 @@ def extract_json_from_output(output: str) -> Dict[str, Any]:
     """
     output = output.strip()
 
-    if output.startswith("{") and output.endswith("}"):
-        return json.loads(output)
+    # 1. Gestion des blocs Markdown (```json ... ```)
+    if "```" in output:
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", output, flags=re.DOTALL)
+        if match:
+            output = match.group(1)
+        else:
+            output = re.sub(r"^```[a-zA-Z0-9]*\s*", "", output)
+            output = re.sub(r"\s*```$", "", output)
 
+    # 2. Extraction du bloc JSON
     match = re.search(r"\{.*\}", output, flags=re.DOTALL)
-    if not match:
-        raise ValueError(
-            "Impossible de trouver un objet JSON dans la sortie de Gemini. "
-            f"Sortie brute (début) : {output[:200]!r}"
-        )
+    if match:
+        json_str = match.group(0)
+    else:
+        json_str = output
 
-    json_str = match.group(0)
-    return json.loads(json_str)
+    # 3. Parsing avec tentative de nettoyage
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # Tentative de réparation du JSON
+        # 1. Suppression des commentaires // (sauf si dans une URL http://)
+        json_str = re.sub(r"(?<!:)\/\/.*", "", json_str)
+        # 2. Suppression des virgules traînantes (trailing commas)
+        json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
+        # 3. Ajout des virgules manquantes entre un bloc fermant et une clé suivante
+        json_str = re.sub(r"([\}\]])\s*(\"[a-zA-Z0-9_]+\"\s*:)", r"\1,\2", json_str)
+        # 4. Ajout des virgules manquantes après une valeur simple et une clé
+        json_str = re.sub(r"([0-9]+|true|false|null)\s+(\"[a-zA-Z0-9_]+\"\s*:)", r"\1,\2", json_str)
+        # 5. Ajout des virgules manquantes après une string et une clé
+        json_str = re.sub(r"(\")\s+(\"[a-zA-Z0-9_]+\"\s*:)", r"\1,\2", json_str)
+
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Erreur de parsing JSON : {e}\n"
+                f"Sortie brute : {output[:500]}..."
+            )
 
 
 # ============================================================================
@@ -329,6 +360,67 @@ def generate_letter_structure_with_gemini(
 
 
 # ============================================================================
+# 5b. Génération HTML pour PDF (Alternative robuste sans Word)
+# ============================================================================
+
+def build_cover_letter_html_from_chunks(chunks: Dict[str, Any]) -> str:
+    """
+    Construit le HTML de la lettre pour conversion PDF via xhtml2pdf.
+    """
+    def safe(val: Optional[str]) -> str:
+        return (val or "").replace("\n", "<br/>")
+
+    header = chunks.get("header_blocks", {}) or {}
+    company = chunks.get("company_blocks", {}) or {}
+
+    css = """
+    @page { size: a4 portrait; margin: 2.5cm; }
+    body { font-family: Helvetica, sans-serif; font-size: 11pt; line-height: 1.4; color: #000; }
+    .sender { text-align: left; margin-bottom: 30px; font-size: 10pt; }
+    .recipient { text-align: right; margin-bottom: 40px; font-size: 10pt; }
+    .meta { text-align: right; margin-bottom: 30px; }
+    .object { font-weight: bold; margin-bottom: 20px; }
+    .content p { margin-bottom: 12px; text-align: justify; }
+    .signature { margin-top: 40px; }
+    """
+
+    html = f"<html><head><style>{css}</style></head><body>"
+
+    # Expéditeur
+    html += "<div class='sender'>"
+    if header.get("fullname_block"): html += f"<strong>{safe(header['fullname_block'])}</strong><br/>"
+    if header.get("location_block"): html += f"{safe(header['location_block'])}<br/>"
+    if header.get("email_block"): html += f"{safe(header['email_block'])}<br/>"
+    if header.get("phone_block"): html += f"{safe(header['phone_block'])}<br/>"
+    if header.get("websites_block"): html += f"{safe(header['websites_block'])}<br/>"
+    html += "</div>"
+
+    # Destinataire
+    html += "<div class='recipient'>"
+    if company.get("contact_block"): html += f"{safe(company['contact_block'])}<br/>"
+    if company.get("company_name_block"): html += f"{safe(company['company_name_block'])}<br/>"
+    if company.get("company_address_block"): html += f"{safe(company['company_address_block'])}<br/>"
+    html += "</div>"
+
+    # Date
+    if chunks.get("place_date_line"):
+        html += f"<div class='meta'>{safe(chunks['place_date_line'])}</div>"
+
+    # Objet
+    if chunks.get("objet_line"):
+        html += f"<div class='object'>{safe(chunks['objet_line'])}</div>"
+
+    # Corps
+    html += "<div class='content'>"
+    if chunks.get("greeting"): html += f"<p>{safe(chunks['greeting'])}</p>"
+    for k in ["para1", "para2", "para3", "para4"]:
+        if chunks.get(k): html += f"<p>{safe(chunks[k])}</p>"
+    if chunks.get("signature"): html += f"<div class='signature'>{safe(chunks['signature'])}</div>"
+    html += "</div></body></html>"
+
+    return html
+
+# ============================================================================
 # 5. Génération DOCX à partir de la structure (sans logique métier)
 # ============================================================================
 def build_cover_letter_docx_from_chunks(
@@ -434,20 +526,15 @@ def build_cover_letter_docx_from_chunks(
 # 6. Conversion DOCX -> PDF
 # ============================================================================
 
-def convert_docx_to_pdf(docx_path: str, pdf_path: Optional[str] = None) -> str:
+def convert_html_to_pdf(html_content: str, pdf_path: str) -> str:
     """
-    Convertit un .docx en .pdf via docx2pdf.
+    Convertit le HTML en PDF via xhtml2pdf.
     """
-    docx_path = os.path.abspath(docx_path)
-    if pdf_path is None:
-        base, _ = os.path.splitext(docx_path)
-        pdf_path = base + ".pdf"
-    else:
-        pdf_path = os.path.abspath(pdf_path)
-
+    pdf_path = os.path.abspath(pdf_path)
     os.makedirs(os.path.dirname(pdf_path) or ".", exist_ok=True)
 
-    convert(docx_path, pdf_path)
+    with open(pdf_path, "wb") as result_file:
+        pisa.CreatePDF(html_content, dest=result_file)
     return pdf_path
 
 
@@ -494,12 +581,13 @@ def generate_personalized_cover_letter_docx_and_pdf(
     # 2) Génération du DOCX
     docx_path = build_cover_letter_docx_from_chunks(chunks, output_path=docx_path)
 
-    # 3) Conversion en PDF
+    # 3) Génération du PDF (via HTML pour éviter la dépendance Word)
     if pdf_filename is None:
         base, _ = os.path.splitext(docx_filename)
         pdf_filename = base + ".pdf"
     pdf_path = os.path.join(output_dir, pdf_filename)
-    pdf_path = convert_docx_to_pdf(docx_path, pdf_path=pdf_path)
+    html_content = build_cover_letter_html_from_chunks(chunks)
+    pdf_path = convert_html_to_pdf(html_content, pdf_path=pdf_path)
 
     return {
         "docx_path": docx_path,

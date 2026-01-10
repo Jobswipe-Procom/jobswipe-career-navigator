@@ -214,6 +214,7 @@ export const JobCard = React.memo(({
             willChange: "transform", // Optimisation pour la fluidité mobile
           }}
           whileDrag={{ cursor: "grabbing", scale: 1.02 }}
+          whileHover={{ scale: 1.01 }}
           className="bg-white rounded-3xl overflow-hidden shadow-2xl relative w-full"
         >
           {/* Like Overlay (droite) */}
@@ -334,5 +335,3 @@ export const JobCard = React.memo(({
 });
 
 JobCard.displayName = "JobCard";
-
-

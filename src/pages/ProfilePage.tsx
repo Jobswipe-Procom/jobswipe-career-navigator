@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogoHeader } from "@/components/LogoHeader";
 import { supabase } from "@/lib/supabaseClient";
-import { Loader2, User, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, User, Save, CheckCircle2, AlertCircle, Home } from "lucide-react";
 import { Profile } from "@/types/profile";
 import { PersonalInfoSection } from "@/components/profile/PersonalInfoSection";
 import { EducationSection } from "@/components/profile/EducationSection";
@@ -54,8 +54,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       setLoading(true);
       setError(null);
 
-      console.log("Chargement du profil pour l'utilisateur:", currentUserId);
-
       const { data, error: fetchError } = await supabase
         .from("profiles")
         .select("*")
@@ -65,7 +63,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       if (fetchError) {
         // Si le profil n'existe pas (code PGRST116), on crée un profil vide
         if (fetchError.code === "PGRST116") {
-          console.log("Profil non trouvé, création d'un profil vide");
           const newProfile: Profile = {
             id: currentUserId,
             first_name: null,
@@ -96,7 +93,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       }
 
       if (!data) {
-        console.log("Aucune donnée retournée, création d'un profil vide");
         const newProfile: Profile = {
           id: currentUserId,
           first_name: null,
@@ -148,7 +144,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         activities: Array.isArray(data.activities) ? data.activities : [],
       };
 
-      console.log("Profil chargé avec succès:", loadedProfile);
       setProfile(loadedProfile);
 
       // Conversion et sauvegarde pour les anciennes pages
@@ -206,8 +201,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       setError(null);
       setSaveStatus(null);
 
-      console.log("Sauvegarde du profil pour l'utilisateur:", currentUserId);
-
       // Préparer les données pour Supabase
       // Les colonnes JSONB acceptent directement les arrays/objets JavaScript
       // Mapper camelCase (TypeScript) vers snake_case (Supabase)
@@ -240,8 +233,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       // Ne pas inclure created_at dans l'upsert si le profil existe déjà
       // (laisser Supabase gérer la date de création)
 
-      console.log("Données à sauvegarder:", JSON.stringify(profileData, null, 2));
-
       // Utiliser upsert pour créer ou mettre à jour le profil
       // Si upsert échoue, essayer avec insert/update séparément
       let result;
@@ -256,7 +247,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         .single();
 
       if (upsertErr) {
-        console.warn("Upsert a échoué, tentative avec insert/update séparément:", upsertErr);
         upsertError = upsertErr;
         
         // Essayer avec update d'abord
@@ -270,7 +260,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         
         if (updateError) {
           // Si update échoue, essayer insert
-          console.log("Update a échoué, tentative avec insert");
           const { data: insertData, error: insertError } = await supabase
             .from("profiles")
             .insert(profileData)
@@ -293,7 +282,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         throw new Error("Aucune donnée retournée après la sauvegarde");
       }
 
-      console.log("Profil sauvegardé avec succès:", result);
       setSaveStatus("success");
 
       // Mettre à jour également le profil simplifié dans le localStorage
@@ -348,12 +336,12 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ultra-light">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-mint" />
-            <p className="text-gray-dark">Chargement du profil...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <p className="text-slate-600">Chargement du profil...</p>
           </div>
         </div>
       </div>
@@ -362,16 +350,16 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
   if (error && !profile) {
     return (
-      <div className="min-h-screen bg-ultra-light">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
-          <div className="w-full max-w-md bg-white shadow-sm border border-gray-light rounded-2xl p-6">
+          <div className="w-full max-w-md bg-white shadow-sm border border-slate-200 rounded-2xl p-6">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
               <p className="text-red-600 mb-4">{error}</p>
               <button
                 onClick={() => navigate("/")}
-                className="text-mint hover:text-mint-dark transition-colors duration-200"
+                className="text-indigo-600 hover:text-indigo-700 transition-colors duration-200"
               >
                 Retour à l'accueil
               </button>
@@ -384,15 +372,15 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-ultra-light">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
-          <div className="w-full max-w-md bg-white shadow-sm border border-gray-light rounded-2xl p-6">
+          <div className="w-full max-w-md bg-white shadow-sm border border-slate-200 rounded-2xl p-6">
             <div className="text-center">
-              <p className="text-gray-dark mb-4">Profil non trouvé</p>
+              <p className="text-slate-600 mb-4">Profil non trouvé</p>
               <button
                 onClick={() => navigate("/")}
-                className="text-mint hover:text-mint-dark transition-colors duration-200"
+                className="text-indigo-600 hover:text-indigo-700 transition-colors duration-200"
               >
                 Retour à l'accueil
               </button>
@@ -404,11 +392,21 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-ultra-light relative">
+    <div className="min-h-screen bg-slate-50 relative">
       {/* Bordures colorées subtiles sur les côtés */}
-      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-rose-400 via-pink-500 via-purple-500 to-indigo-600 z-0 pointer-events-none" />
-      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-rose-400 via-pink-500 via-purple-500 to-indigo-600 z-0 pointer-events-none" />
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
+      {/* Bouton Accueil - Fixe en haut à droite */}
+      <button
+        onClick={() => navigate("/")}
+        className="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+        title="Retour à l'accueil"
+        aria-label="Retour à l'accueil"
+      >
+        <Home className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
+      </button>
+
       <div className="relative z-10">
         <LogoHeader />
       </div>
@@ -417,12 +415,12 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         {/* En-tête avec titre et bouton de sauvegarde */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-mint-light rounded-2xl p-3 border border-mint/30">
-              <User className="w-6 h-6 text-mint-dark" />
+            <div className="bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
+              <User className="w-6 h-6 text-indigo-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-graphite">Mon profil</h1>
-              <p className="text-sm text-gray-medium mt-1">
+              <h1 className="text-2xl font-semibold text-slate-800">Mon profil</h1>
+              <p className="text-sm text-slate-500 mt-1">
                 Complétez votre CV en ligne
               </p>
             </div>
@@ -437,7 +435,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
                 ? "bg-green-500 text-white"
                 : saveStatus === "error"
                 ? "bg-red-500 text-white"
-                : "bg-mint text-white hover:bg-mint-dark"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {saving ? (
@@ -508,7 +506,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
                 ? "bg-green-500 text-white"
                 : saveStatus === "error"
                 ? "bg-red-500 text-white"
-                : "bg-mint text-white hover:bg-mint-dark"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {saving ? (

@@ -8,11 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { fetchJobById } from "@/lib/supabase";
 import { supabase } from "@/lib/supabaseClient";
 import { addFavorite, removeFavorite, isFavorite } from "@/lib/storage";
-import { calculateCompatibilityScore } from "@/lib/scoring";
 import { downloadFile } from "@/lib/utils";
 import { Job, UserProfile } from "@/types/job";
 import { Profile } from "@/types/profile";
-import { Loader2, ExternalLink, FileText, TrendingUp, Heart, Mail, Sparkles, PenTool } from "lucide-react";
+import { Loader2, ExternalLink, FileText, TrendingUp, Heart, Mail, Sparkles, PenTool, ArrowLeft, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const OffreDetail = () => {
@@ -26,6 +25,7 @@ const OffreDetail = () => {
   const [generating, setGenerating] = useState(false);
   const [generatingCV, setGeneratingCV] = useState(false);
   const [generatingCL, setGeneratingCL] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -91,8 +91,6 @@ const OffreDetail = () => {
         competences: "Aucune compétence renseignée. Allez sur la page de profil pour en ajouter.",
         contact: "Aucun contact renseigné. Allez sur la page de profil pour en ajouter.",
       };
-
-  const score = job ? calculateCompatibilityScore(job, profile) : 0;
 
   useEffect(() => {
     if (id) {
@@ -178,6 +176,33 @@ const OffreDetail = () => {
       language: "fr"
     };
   };
+
+  useEffect(() => {
+    if (!job || !userProfile) return;
+
+    const fetchScore = async () => {
+      try {
+        const cvData = formatProfileForBackend(userProfile);
+        // Utiliser les données brutes si disponibles pour avoir les hard_skills
+        const offerData = { ...job, ...(job.raw || {}) };
+        
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${API_URL}/score-fast`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cv_data: cvData, offer_data: offerData })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setScore(data.score);
+        }
+      } catch (e) {
+        console.error("Erreur fetch score:", e);
+      }
+    };
+    fetchScore();
+  }, [job, userProfile]);
 
   // Fonction robuste pour télécharger un PDF depuis une chaîne Base64
   const downloadBase64Pdf = (filename: string, base64Data: string) => {
@@ -343,10 +368,10 @@ const OffreDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
         </div>
       </div>
     );
@@ -354,27 +379,62 @@ const OffreDetail = () => {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="px-6 py-8 text-center">
-          <p className="text-muted-foreground">Offre non trouvée</p>
+          <p className="text-slate-600">Offre non trouvée</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <LogoHeader />
+    <div className="min-h-screen bg-slate-50 relative">
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
-      <div className="px-6 py-8 max-w-2xl mx-auto">
-        <Card className="shadow-lg">
+      {/* Bouton Retour - Fixe en haut à gauche */}
+      <button
+        onClick={() => navigate(-1)}
+        className="fixed top-4 left-4 z-50 w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+        title="Retour"
+        aria-label="Retour"
+      >
+        <ArrowLeft className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
+      </button>
+
+      {/* Bouton Accueil - Fixe en haut à droite */}
+      <button
+        onClick={() => navigate("/")}
+        className="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+        title="Retour à l'accueil"
+        aria-label="Retour à l'accueil"
+      >
+        <Home className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
+      </button>
+
+      <div className="relative z-10">
+        <LogoHeader />
+      </div>
+      
+      <div className="px-6 py-8 max-w-2xl mx-auto relative z-10">
+        <Card className="shadow-lg border-slate-100">
           <CardHeader className="relative">
             <div className="flex justify-between items-start">
               <h2 className="text-xl font-bold text-foreground pr-16">Poste</h2>
-              <Badge className="absolute top-6 right-6 bg-primary text-primary-foreground text-lg px-4 py-2">
-                {score}%
-              </Badge>
+              {score !== null && (
+                <Badge 
+                  className="absolute top-6 right-6 text-lg px-4 py-2 border"
+                  style={{
+                    backgroundColor: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 85%, 96%)`,
+                    color: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 90%, 35%)`,
+                    borderColor: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 80%, 80%)`,
+                  }}
+                >
+                  {score}%
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground text-sm mt-1">{job.company}</p>
             
@@ -448,7 +508,7 @@ const OffreDetail = () => {
                 <PrimaryButton
                   onClick={handleGenerateCV}
                   disabled={generatingCV || generating}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 >
                   {generatingCV ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
                   {generatingCV ? "Génération..." : "Générer CV"}
@@ -457,7 +517,7 @@ const OffreDetail = () => {
                 <PrimaryButton
                   onClick={handleGenerateCoverLetter}
                   disabled={generatingCL || generating}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
                 >
                   {generatingCL ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PenTool className="w-4 h-4 mr-2" />}
                   {generatingCL ? "Génération..." : "Générer Lettre"}
@@ -467,7 +527,7 @@ const OffreDetail = () => {
               <PrimaryButton
                 onClick={handleGenerateApplication}
                 disabled={generating || generatingCV || generatingCL}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
+                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md"
               >
                 {generating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
                 {generating ? "Génération IA en cours..." : "Générer Pack Candidature IA"}

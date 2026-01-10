@@ -28,6 +28,54 @@ interface SwipeHistoryItem {
   jobId: string;
 }
 
+// Composant pour afficher le score de compatibilité dans les listes
+const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
+  const [score, setScore] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!job || !cvData) return;
+
+    const fetchScore = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/score-fast`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // On fusionne job et job.raw pour s'assurer d'avoir les hard_skills pour le scoring
+          body: JSON.stringify({ cv_data: cvData, offer_data: { ...job, ...(job.raw || {}) } }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setScore(data.score);
+        }
+      } catch (e) {
+        console.error("Erreur fetch score:", e);
+      }
+    };
+    fetchScore();
+  }, [job, cvData]);
+
+  if (score === null) return null;
+
+  // Calcul de la couleur dynamique (Rouge 0 -> Vert 120)
+  const hue = Math.min(120, Math.max(0, (score / 100) * 120));
+  const style = {
+    backgroundColor: `hsl(${hue}, 85%, 96%)`,
+    color: `hsl(${hue}, 90%, 35%)`,
+    borderColor: `hsl(${hue}, 80%, 80%)`,
+  };
+
+  return (
+    <div 
+      className="absolute top-4 left-4 px-3 py-1 rounded-full border font-bold text-sm z-20 shadow-sm flex items-center gap-1"
+      style={style}
+    >
+      <span className="text-xs font-normal opacity-80">Match</span>
+      {score}%
+    </div>
+  );
+};
+
 // Composant pour la page de swipe des offres (JobswipeOffers)
 const JobswipeOffers = ({ userId }: OffresProps) => {
   const navigate = useNavigate();
@@ -63,6 +111,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
 
   // State pour l'historique des swipes (pour le rewind)
   const [swipeHistory, setSwipeHistory] = useState<SwipeHistoryItem[]>([]);
+
+  // State pour les données CV et le score courant
+  const [userCvData, setUserCvData] = useState<any>(null);
+  const [currentScore, setCurrentScore] = useState<number | null>(null);
 
   // Fonction utilitaire : obtenir le début de la journée (minuit local)
   const getStartOfDay = (): Date => {
@@ -111,7 +163,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       
       // Compter les likes ET les superlikes pour la limite quotidienne
       // Les superlikes sont des likes avec is_superlike = true
-      const { count: likesCount, error: likesError } = await supabase
+      const { count: likesCount, error: likesError } = await (supabase as any)
         .from("swipes")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
@@ -120,7 +172,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         .gte("created_at", startOfDayUTC.toISOString())
         .lte("created_at", endOfDayUTC.toISOString());
 
-      const { count: superlikesCount, error: superlikesError } = await supabase
+      const { count: superlikesCount, error: superlikesError } = await (supabase as any)
         .from("swipes")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
@@ -137,8 +189,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const swipesToday = (likesCount || 0) + (superlikesCount || 0);
       const isLimitReached = swipesToday >= DAILY_LIKE_LIMIT;
       
-      console.log(`[Daily Limit] swipes_today: ${swipesToday}, limitReached: ${isLimitReached}, limit: ${DAILY_LIKE_LIMIT}`);
-      
       setLikesToday(swipesToday);
       setLimitReached(isLimitReached);
 
@@ -150,6 +200,66 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       console.error("Error loading likes today:", err);
     }
   };
+
+  // Charger les données CV de l'utilisateur (requis pour le scoring)
+  useEffect(() => {
+    const loadUserCv = async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+
+        if (data) {
+          // Transformation des données de la table 'profiles' au format attendu par le backend
+          const formattedCvData = {
+            skills: {
+              hard_skills: data.hard_skills || [],
+              soft_skills: data.soft_skills || [],
+            },
+            professional_experiences: (data.experiences || []).map((exp: any) => ({
+              title: exp.role || "", 
+              company: exp.company || "",
+              description: exp.description || ""
+            })),
+            raw_summary: data.target_role || "",
+          };
+          setUserCvData(formattedCvData);
+        }
+      } catch (err) {
+        console.error("Erreur chargement CV:", err);
+      }
+    };
+    loadUserCv();
+  }, [userId]);
+
+  // Calculer le score pour l'offre courante (Swipe view)
+  useEffect(() => {
+    const currentOffer = jobs[currentIndex];
+    if (!currentOffer || !userCvData) {
+      setCurrentScore(null);
+      return;
+    }
+
+    const fetchCurrentScore = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/score-fast`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cv_data: userCvData, offer_data: { ...currentOffer, ...(currentOffer.raw || {}) } }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentScore(data.score);
+        }
+      } catch (e) {
+        console.error("Erreur fetch score courant:", e);
+      }
+    };
+    fetchCurrentScore();
+  }, [currentIndex, jobs, userCvData]);
 
   // Charger les offres non swipées au montage si onglet "all"
   useEffect(() => {
@@ -203,7 +313,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       setError(null);
 
       // Récupérer les job_id déjà swipés par l'utilisateur (tous les temps, pas seulement aujourd'hui)
-      const { data: swipesData, error: swipesError } = await supabase
+      const { data: swipesData, error: swipesError } = await (supabase as any)
         .from("swipes")
         .select("job_id")
         .eq("user_id", userId);
@@ -217,7 +327,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const swipedJobIds = swipesData?.map((swipe) => swipe.job_id) || [];
 
       // Récupérer les jobs non swipés en excluant ceux déjà swipés dans la requête
-      let query = supabase
+      let query = (supabase as any)
         .from("jobs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -236,8 +346,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         (job) => !swipedJobIds.includes(job.id)
       ).slice(0, 20); // Limiter à 20 après filtrage
 
-      console.log(`[Load Jobs] Total jobs fetched: ${jobsData?.length || 0}, Already swiped: ${swipedJobIds.length}, Available: ${unswipedJobs.length}`);
-      
       setJobs(unswipedJobs);
       setCurrentIndex(0); // Reset l'index quand on charge de nouvelles offres
     } catch (err) {
@@ -254,7 +362,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       setError(null);
 
       // Récupérer les swipes avec direction = 'like' et is_superlike = false (likes normaux uniquement)
-      const { data: swipesData, error: swipesError } = await supabase
+      const { data: swipesData, error: swipesError } = await (supabase as any)
         .from("swipes")
         .select("job_id, created_at")
         .eq("user_id", userId)
@@ -277,7 +385,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const likedJobIds = swipesData.map((swipe) => swipe.job_id);
 
       // Récupérer les jobs correspondants
-      const { data: jobsData, error: jobsError } = await supabase
+      const { data: jobsData, error: jobsError } = await (supabase as any)
         .from("jobs")
         .select("*")
         .in("id", likedJobIds);
@@ -308,8 +416,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // Fonction pour sauvegarder le swipe dans Supabase (appelée de manière asynchrone)
   const saveSwipeToSupabase = async (direction: "like" | "dislike", jobId: string, isSuperlike: boolean = false) => {
     try {
-      console.log(`[Save Swipe] Saving ${direction}${isSuperlike ? " (superlike)" : ""} for job ${jobId}`);
-      const { data, error: swipeError } = await supabase.from("swipes").upsert(
+      const { data, error: swipeError } = await (supabase as any).from("swipes").upsert(
         {
           user_id: userId,
           job_id: jobId,
@@ -326,8 +433,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         setError(`Erreur lors de l'enregistrement du swipe: ${swipeError.message}`);
         return;
       }
-
-      console.log(`[Save Swipe] Successfully saved ${direction}${isSuperlike ? " (superlike)" : ""} for job ${jobId}`, data);
 
       // Si c'est un like (normal ou superlike), recharger le compteur depuis la base de données
       if (direction === "like") {
@@ -349,8 +454,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       return;
     }
 
-    console.log("Swipe right:", { currentIndex, offersLength: jobs.length, offerId: currentOffer.id });
-
     // Ajouter à l'historique AVANT de passer à l'offre suivante
     setSwipeHistory((prev) => [
       ...prev,
@@ -364,7 +467,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     // Avancer immédiatement l'index (optimistic UI)
     setCurrentIndex((prev) => {
       const newIndex = prev + 1;
-      console.log("Index updated:", { prev, newIndex, hasMoreOffers: newIndex < jobs.length });
       
       // Si on arrive à la fin, recharger plus d'offres
       if (newIndex >= jobs.length - 1) {
@@ -387,8 +489,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     const currentOffer = jobs[currentIndex];
     if (!currentOffer || swiping) return;
 
-    console.log("Swipe left:", { currentIndex, offersLength: jobs.length, offerId: currentOffer.id });
-
     // Ajouter à l'historique AVANT de passer à l'offre suivante
     setSwipeHistory((prev) => [
       ...prev,
@@ -402,7 +502,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     // Avancer immédiatement l'index (optimistic UI)
     setCurrentIndex((prev) => {
       const newIndex = prev + 1;
-      console.log("Index updated:", { prev, newIndex, hasMoreOffers: newIndex < jobs.length });
       
       // Si on arrive à la fin, recharger plus d'offres
       if (newIndex >= jobs.length - 1) {
@@ -426,13 +525,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     // Si l'argument est un Job (a une propriété 'company'), on l'utilise.
     // Sinon (undefined ou event venant du swipe), on utilise le job courant.
     const currentOffer = (job && typeof job === 'object' && 'company' in job) ? (job as Job) : jobs[currentIndex];
-    console.log("handleOpenDetails appelé", { currentOffer, currentIndex, jobsLength: jobs.length });
     if (currentOffer) {
       setSelectedOffer(currentOffer);
       setIsDetailOpen(true);
-      console.log("Modal ouvert avec l'offre:", currentOffer.id);
-    } else {
-      console.warn("Aucune offre disponible pour ouvrir les détails");
     }
   };
 
@@ -464,7 +559,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
 
     // Supprimer le swipe de Supabase
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("swipes")
         .delete()
         .eq("user_id", userId)
@@ -503,8 +598,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       return;
     }
 
-    console.log("Superlike:", { currentIndex, offersLength: jobs.length, offerId: currentOffer.id });
-
     // Ajouter à l'historique AVANT de passer à l'offre suivante
     setSwipeHistory((prev) => [
       ...prev,
@@ -518,7 +611,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     // Avancer immédiatement l'index (optimistic UI)
     setCurrentIndex((prev) => {
       const newIndex = prev + 1;
-      console.log("Index updated:", { prev, newIndex, hasMoreOffers: newIndex < jobs.length });
       
       // Si on arrive à la fin, recharger plus d'offres
       if (newIndex >= jobs.length - 1) {
@@ -556,8 +648,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       setLoadingSuperliked(true);
       setError(null);
 
-      console.log("[Load Superlikes] Loading superliked jobs for user:", userId);
-
       // Utiliser la fonction helper getSuperlikedJobs
       const jobs = await getSuperlikedJobs(userId);
       setSuperlikedJobs(jobs);
@@ -575,7 +665,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       setError(null);
 
       // Récupérer les job_id déjà swipés (tous les temps)
-      const { data: swipesData, error: swipesError } = await supabase
+      const { data: swipesData, error: swipesError } = await (supabase as any)
         .from("swipes")
         .select("job_id")
         .eq("user_id", userId);
@@ -588,7 +678,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const swipedJobIds = swipesData?.map((swipe) => swipe.job_id) || [];
 
       // Récupérer plus de jobs
-      const { data: jobsData, error: jobsError } = await supabase
+      const { data: jobsData, error: jobsError } = await (supabase as any)
         .from("jobs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -604,8 +694,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         (job) => !swipedJobIds.includes(job.id)
       ).slice(0, 20); // Limiter à 20 après filtrage
 
-      console.log(`[Load More] Total jobs fetched: ${jobsData?.length || 0}, Already swiped: ${swipedJobIds.length}, Available: ${unswipedJobs.length}`);
-      
       setJobs(unswipedJobs);
     } catch (err) {
       console.error("Error loading more jobs:", err);
@@ -648,12 +736,12 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // Écran de chargement initial
   if (loading && activeTab === "all" && jobs.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col bg-ultra-light">
+      <div className="min-h-screen flex flex-col bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center flex-1">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-mint" />
-            <p className="text-gray-dark">Chargement des offres...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <p className="text-slate-600">Chargement des offres...</p>
           </div>
         </div>
       </div>
@@ -663,12 +751,12 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // Écran de chargement pour les offres likées
   if (loadingLiked && activeTab === "liked") {
     return (
-      <div className="min-h-screen bg-ultra-light">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-mint" />
-            <p className="text-gray-dark">Chargement de vos offres likées...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <p className="text-slate-600">Chargement de vos offres likées...</p>
           </div>
         </div>
       </div>
@@ -678,12 +766,12 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // Écran de chargement pour les offres superlikées
   if (loadingSuperliked && activeTab === "superliked") {
     return (
-      <div className="min-h-screen bg-ultra-light">
+      <div className="min-h-screen bg-slate-50">
         <LogoHeader />
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-mint" />
-            <p className="text-gray-dark">Chargement de vos offres superlikées...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <p className="text-slate-600">Chargement de vos offres superlikées...</p>
           </div>
         </div>
       </div>
@@ -691,20 +779,24 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-ultra-light relative">
+    <div className="min-h-screen flex flex-col bg-slate-50 relative">
       {/* Bordures colorées subtiles sur les côtés */}
-      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-rose-400 via-pink-500 via-purple-500 to-indigo-600 z-0 pointer-events-none" />
-      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-rose-400 via-pink-500 via-purple-500 to-indigo-600 z-0 pointer-events-none" />
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
-      {/* Bouton Accueil - Fixe en haut à gauche */}
+      {/* Bouton Accueil - Fixe en haut à droite */}
       <button
         onClick={() => navigate("/")}
-        className="fixed top-4 left-4 z-50 w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+        className="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
         title="Retour à l'accueil"
         aria-label="Retour à l'accueil"
       >
         <Home className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
       </button>
+
+      <div className="relative z-10">
+        <LogoHeader />
+      </div>
       
       <div className="flex-1 flex flex-col px-2 sm:px-3 py-4 relative z-10 overflow-y-auto">
         <div className="w-full max-w-[900px] mx-auto space-y-4 pb-8">
@@ -714,8 +806,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               onClick={() => setActiveTab("all")}
               className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
                 activeTab === "all"
-                  ? "bg-white text-indigo-600 shadow-lg scale-105 border-2 border-indigo-200"
-                  : "bg-white/80 text-gray-600 hover:bg-white border border-gray-200"
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
+                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
               }`}
             >
               Toutes les offres
@@ -724,8 +816,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               onClick={() => setActiveTab("liked")}
               className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
                 activeTab === "liked"
-                  ? "bg-white text-indigo-600 shadow-lg scale-105 border-2 border-indigo-200"
-                  : "bg-white/80 text-gray-600 hover:bg-white border border-gray-200"
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
+                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
               }`}
             >
               Offres likées
@@ -734,8 +826,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               onClick={() => setActiveTab("superliked")}
               className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
                 activeTab === "superliked"
-                  ? "bg-white text-indigo-600 shadow-lg scale-105 border-2 border-indigo-200"
-                  : "bg-white/80 text-gray-600 hover:bg-white border border-gray-200"
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
+                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
               }`}
             >
               Superlikes
@@ -754,15 +846,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
             <div className="text-center mb-3">
               <div className="inline-flex flex-col items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-mint animate-pulse" />
-                  <span className="text-gray-700 text-sm font-semibold">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-slate-700 text-sm font-semibold">
                     {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
                   </span>
                 </div>
                 {/* Barre de progression */}
                 <div className="w-full max-w-[200px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-mint to-indigo rounded-full transition-all duration-300 ease-out"
+                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300 ease-out"
                     style={{ width: `${(likesToday / DAILY_LIKE_LIMIT) * 100}%` }}
                   />
                 </div>
@@ -777,45 +869,45 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               <div className="w-full max-w-[850px] mx-auto">
                 {jobs.length === 0 || currentIndex >= jobs.length ? (
                   <div className="text-center py-12">
-                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-light mb-6">
-                      <Briefcase className="w-16 h-16 mx-auto mb-4 text-mint" />
+                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
+                      <Briefcase className="w-16 h-16 mx-auto mb-4 text-indigo-400" />
                       
                       {/* Afficher le message approprié selon la situation */}
                       {limitReached ? (
                         <>
-                          <h2 className="text-2xl font-semibold mb-2 text-graphite">Limite quotidienne atteinte</h2>
-                          <p className="text-gray-dark mb-6">
+                          <h2 className="text-2xl font-semibold mb-2 text-slate-800">Limite quotidienne atteinte</h2>
+                          <p className="text-slate-600 mb-6">
                             Tu as utilisé tes {DAILY_LIKE_LIMIT} likes pour aujourd'hui. Reviens demain pour découvrir de nouvelles offres !
                           </p>
                           
                           {/* Horloge de limite atteinte - Style Alan */}
-                          <div className="mt-6 mb-6 p-6 rounded-2xl bg-white border border-indigo/20 shadow-sm">
-                            <p className="text-graphite text-center mb-3 text-base font-semibold">
+                          <div className="mt-6 mb-6 p-6 rounded-2xl bg-white border border-indigo-100 shadow-sm">
+                            <p className="text-slate-800 text-center mb-3 text-base font-semibold">
                               Tu as atteint tes {DAILY_LIKE_LIMIT} likes pour aujourd'hui 😅
                             </p>
-                            <p className="text-gray-medium text-center text-sm mb-3">
+                            <p className="text-slate-500 text-center text-sm mb-3">
                               Nouvelles offres disponibles dans :
                             </p>
                             <div className="text-center">
-                              <p className="text-indigo text-4xl font-semibold font-mono tracking-wider">
+                              <p className="text-indigo-600 text-4xl font-semibold font-mono tracking-wider">
                                 {formatTimeRemaining(timeRemaining)}
                               </p>
                             </div>
-                            <p className="text-xs text-gray-medium text-center mt-3">
+                            <p className="text-xs text-slate-400 text-center mt-3">
                               {likesToday}/{DAILY_LIKE_LIMIT} likes utilisés aujourd'hui
                             </p>
                           </div>
                         </>
                       ) : (
                         <>
-                          <h2 className="text-2xl font-semibold mb-2 text-graphite">Plus d'offres disponibles</h2>
-                          <p className="text-gray-dark mb-6">
+                          <h2 className="text-2xl font-semibold mb-2 text-slate-800">Plus d'offres disponibles</h2>
+                          <p className="text-slate-600 mb-6">
                             Vous avez parcouru toutes les offres disponibles pour le moment. De nouvelles offres seront ajoutées prochainement.
                           </p>
                           
                           <button
                             onClick={loadMoreJobs}
-                            className="px-6 py-3 rounded-2xl bg-mint text-white font-medium shadow-sm hover:bg-mint-dark transition-all duration-200 ease-out"
+                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer transition-all duration-200 ease-out"
                           >
                             Recharger les offres
                           </button>
@@ -829,7 +921,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     {(() => {
                       const currentOffer = jobs[currentIndex];
                       if (!currentOffer) {
-                        console.log("No current offer:", { currentIndex, jobsLength: jobs.length });
                         return null;
                       }
                       return (
@@ -842,23 +933,24 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             formatSalary={formatSalary}
                             getJobDescription={getJobDescriptionShort}
                             disabled={swiping === currentOffer.id || (limitReached && false)}
+                            score={currentScore}
                           />
 
                         {/* Horloge de limite atteinte - Style Alan */}
                         {limitReached && (
-                          <div className="mt-3 p-6 rounded-2xl bg-white border border-indigo/20 shadow-sm">
-                            <p className="text-graphite text-center mb-3 text-base font-semibold">
+                          <div className="mt-3 p-6 rounded-2xl bg-white border border-indigo-100 shadow-sm">
+                            <p className="text-slate-800 text-center mb-3 text-base font-semibold">
                               Tu as atteint tes {DAILY_LIKE_LIMIT} likes pour aujourd'hui 😅
                             </p>
-                            <p className="text-gray-medium text-center text-sm mb-3">
+                            <p className="text-slate-500 text-center text-sm mb-3">
                               Nouvelles offres disponibles dans :
                             </p>
                             <div className="text-center">
-                              <p className="text-indigo text-4xl font-semibold font-mono tracking-wider">
+                              <p className="text-indigo-600 text-4xl font-semibold font-mono tracking-wider">
                                 {formatTimeRemaining(timeRemaining)}
                               </p>
                             </div>
-                            <p className="text-xs text-gray-medium text-center mt-3">
+                            <p className="text-xs text-slate-400 text-center mt-3">
                               {likesToday}/{DAILY_LIKE_LIMIT} likes utilisés aujourd'hui
                             </p>
                           </div>
@@ -874,7 +966,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                               <button
                                 onClick={handleRewind}
                                 disabled={swipeHistory.length === 0 || swiping !== null}
-                                className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 border-2 border-white/30"
+                                className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 border-2 border-white/30"
                                 title={swipeHistory.length === 0 ? "Aucun swipe à annuler" : "Annuler le dernier swipe"}
                               >
                                 <RotateCcw className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -884,10 +976,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                               <button
                                 onClick={handleSwipeLeft}
                                 disabled={swiping === currentOffer.id}
-                                className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center transition-all duration-200 ease-out hover:shadow-2xl hover:scale-110 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 border-2 border-red-100"
+                                className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center transition-all duration-200 ease-out hover:shadow-2xl hover:scale-110 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 border-2 border-rose-100 text-rose-500 hover:bg-rose-50"
                                 title="Glisser vers la gauche ou cliquer pour passer"
                               >
-                                <X className="w-9 h-9 text-red-500" strokeWidth={3} />
+                                <X className="w-9 h-9" strokeWidth={3} />
                               </button>
 
                               {/* Bouton Superlike */}
@@ -897,7 +989,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 className={`w-16 h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 ${
                                   limitReached 
                                     ? "bg-gray-200 border-2 border-gray-300" 
-                                    : "bg-gradient-to-br from-blue-400 to-indigo-500 border-2 border-white/30 hover:shadow-2xl"
+                                    : "bg-gradient-to-br from-sky-400 to-blue-500 border-2 border-white/30 hover:shadow-2xl"
                                 }`}
                                 title={limitReached ? `Limite de ${DAILY_LIKE_LIMIT} likes par jour atteinte` : "Superliker cette offre"}
                               >
@@ -911,7 +1003,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 className={`w-16 h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 ${
                                   limitReached 
                                     ? "bg-gray-200 border-2 border-gray-300" 
-                                    : "bg-gradient-to-br from-emerald-400 to-green-500 border-2 border-white/30 hover:shadow-2xl"
+                                    : "bg-gradient-to-br from-emerald-400 to-teal-500 border-2 border-white/30 hover:shadow-2xl"
                                 }`}
                                 title={limitReached ? `Limite de ${DAILY_LIKE_LIMIT} likes par jour atteinte` : "Glisser vers la droite ou cliquer pour liker"}
                               >
@@ -929,13 +1021,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             <>
                               {swiping === currentOffer.id && (
                                 <div className="text-center pt-2">
-                                  <Loader2 className="w-6 h-6 animate-spin text-mint mx-auto" />
+                                  <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
                                 </div>
                               )}
 
                               {/* Compteur d'offres restantes */}
                               {currentIndex < jobs.length - 1 && (
-                                <p className="text-center text-sm text-gray-medium pt-1">
+                                <p className="text-center text-sm text-slate-400 pt-1">
                                   {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
                                 </p>
                               )}
@@ -955,15 +1047,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               {likedJobs.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center max-w-md px-6">
-                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-light mb-6">
-                      <Heart className="w-16 h-16 mx-auto mb-4 text-mint" />
-                      <h2 className="text-2xl font-semibold mb-2 text-graphite">Aucune offre likée</h2>
-                      <p className="text-gray-dark mb-6">
+                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
+                      <Heart className="w-16 h-16 mx-auto mb-4 text-indigo-400" />
+                      <h2 className="text-2xl font-semibold mb-2 text-slate-800">Aucune offre likée</h2>
+                      <p className="text-slate-600 mb-6">
                         Tu n'as pas encore liké d'offres. Va dans l'onglet "Toutes les offres" pour commencer à swiper.
                       </p>
                       <button
                         onClick={() => setActiveTab("all")}
-                        className="px-6 py-3 rounded-2xl bg-mint text-white font-medium shadow-sm hover:bg-mint-dark transition-all duration-200 ease-out"
+                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-out"
                       >
                         Voir toutes les offres
                       </button>
@@ -973,60 +1065,61 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               ) : (
                 <div className="space-y-4 max-w-2xl mx-auto">
                   {likedJobs.map((job) => (
-                    <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-light">
+                    <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative hover:shadow-md hover:scale-[1.01] transition-all duration-200">
+                      {userCvData && <JobScore job={job} cvData={userCvData} />}
                       <div className="p-6 space-y-4">
                         {/* Titre */}
-                        <div className="bg-mint-light rounded-2xl p-4 border border-mint/30">
-                          <h2 className="text-2xl font-semibold text-graphite mb-2">
+                        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-2xl p-4 border border-indigo-100">
+                          <h2 className="text-2xl font-semibold text-slate-800 mb-2">
                             {job.title}
                           </h2>
-                          <div className="flex items-center gap-2 text-gray-dark">
+                          <div className="flex items-center gap-2 text-slate-600">
                             <Building2 className="w-4 h-4" />
                             <span className="text-base">{job.company}</span>
-                            <span className="mx-1 text-gray-medium">•</span>
+                            <span className="mx-1 text-slate-400">•</span>
                             <MapPin className="w-4 h-4" />
                             <span className="text-base">{job.location}</span>
                           </div>
                         </div>
 
                         {/* Informations détaillées */}
-                        <div className="space-y-2 pt-2 border-t border-gray-light">
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-medium">Type de contrat:</span>
-                              <span className="text-graphite">{job.contract_type || "Non spécifié"}</span>
+                              <span className="font-medium text-slate-500">Type de contrat:</span>
+                              <span className="text-slate-800">{job.contract_type || "Non spécifié"}</span>
                             </div>
                             {job.secteur && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Secteur:</span>
-                                <span className="text-graphite">{job.secteur}</span>
+                                <span className="font-medium text-slate-500">Secteur:</span>
+                                <span className="text-slate-800">{job.secteur}</span>
                               </div>
                             )}
                             {job.niveau && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Niveau:</span>
-                                <span className="text-graphite">{job.niveau}</span>
+                                <span className="font-medium text-slate-500">Niveau:</span>
+                                <span className="text-slate-800">{job.niveau}</span>
                               </div>
                             )}
                             {job.famille && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Famille:</span>
-                                <span className="text-graphite">{job.famille}</span>
+                                <span className="font-medium text-slate-500">Famille:</span>
+                                <span className="text-slate-800">{job.famille}</span>
                               </div>
                             )}
                           </div>
                           {formatSalary(job) && (
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-medium">Salaire:</span>
-                              <span className="text-mint-dark font-semibold">{formatSalary(job)}</span>
+                              <span className="font-medium text-slate-500">Salaire:</span>
+                              <span className="text-emerald-600 font-semibold">{formatSalary(job)}</span>
                             </div>
                           )}
                         </div>
 
                         {/* Description */}
-                        <div className="pt-2 border-t border-gray-light">
-                          <h3 className="font-semibold text-graphite mb-2">Résumé / Description</h3>
-                          <p className="text-sm text-gray-dark leading-relaxed">
+                        <div className="pt-2 border-t border-slate-100">
+                          <h3 className="font-semibold text-slate-800 mb-2">Résumé / Description</h3>
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             {getJobDescriptionShort(job)}
                           </p>
                         </div>
@@ -1035,13 +1128,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                         <div className="pt-2 flex flex-col sm:flex-row gap-3">
                           <button
                             onClick={() => navigate(`/offres/${job.id}`)}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-black font-medium shadow-lg hover:shadow-xl transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             🔍 Détails
                           </button>
                           <button
                             onClick={() => window.open(job.redirect_url, "_blank")}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo text-white font-medium shadow-sm hover:bg-indigo/90 transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche
@@ -1059,15 +1152,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               {superlikedJobs.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center max-w-md px-6">
-                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-light mb-6">
+                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
                       <Star className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
-                      <h2 className="text-2xl font-semibold mb-2 text-graphite">Aucune offre superlikée</h2>
-                      <p className="text-gray-dark mb-6">
+                      <h2 className="text-2xl font-semibold mb-2 text-slate-800">Aucune offre superlikée</h2>
+                      <p className="text-slate-600 mb-6">
                         Aucune offre superlikée pour le moment. Utilisez l'étoile pour superliker une offre !
                       </p>
                       <button
                         onClick={() => setActiveTab("all")}
-                        className="px-6 py-3 rounded-2xl bg-mint text-white font-medium shadow-sm hover:bg-mint-dark transition-all duration-200 ease-out"
+                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-out"
                       >
                         Voir toutes les offres
                       </button>
@@ -1077,73 +1170,80 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               ) : (
                 <div className="space-y-4 max-w-2xl mx-auto">
                   {superlikedJobs.map((job) => (
-                    <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-light">
+                    <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative hover:shadow-md hover:scale-[1.01] transition-all duration-200">
+                      {userCvData && <JobScore job={job} cvData={userCvData} />}
                       <div className="p-6 space-y-4">
                         {/* Titre avec badge Superlike */}
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-indigo/30">
+                        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl p-4 border border-indigo-100">
                           <div className="flex items-center gap-2 mb-2">
                             <Star className="w-5 h-5 text-indigo-600 fill-indigo-600" />
                             <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Superlike</span>
                           </div>
-                          <h2 className="text-2xl font-semibold text-graphite mb-2">
+                          <h2 className="text-2xl font-semibold text-slate-800 mb-2">
                             {job.title}
                           </h2>
-                          <div className="flex items-center gap-2 text-gray-dark">
+                          <div className="flex items-center gap-2 text-slate-600">
                             <Building2 className="w-4 h-4" />
                             <span className="text-base">{job.company}</span>
-                            <span className="mx-1 text-gray-medium">•</span>
+                            <span className="mx-1 text-slate-400">•</span>
                             <MapPin className="w-4 h-4" />
                             <span className="text-base">{job.location}</span>
                           </div>
                         </div>
 
                         {/* Informations détaillées */}
-                        <div className="space-y-2 pt-2 border-t border-gray-light">
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-medium">Type de contrat:</span>
-                              <span className="text-graphite">{job.contract_type || "Non spécifié"}</span>
+                              <span className="font-medium text-slate-500">Type de contrat:</span>
+                              <span className="text-slate-800">{job.contract_type || "Non spécifié"}</span>
                             </div>
                             {job.secteur && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Secteur:</span>
-                                <span className="text-graphite">{job.secteur}</span>
+                                <span className="font-medium text-slate-500">Secteur:</span>
+                                <span className="text-slate-800">{job.secteur}</span>
                               </div>
                             )}
                             {job.niveau && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Niveau:</span>
-                                <span className="text-graphite">{job.niveau}</span>
+                                <span className="font-medium text-slate-500">Niveau:</span>
+                                <span className="text-slate-800">{job.niveau}</span>
                               </div>
                             )}
                             {job.famille && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-gray-medium">Famille:</span>
-                                <span className="text-graphite">{job.famille}</span>
+                                <span className="font-medium text-slate-500">Famille:</span>
+                                <span className="text-slate-800">{job.famille}</span>
                               </div>
                             )}
                           </div>
                           {formatSalary(job) && (
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-medium">Salaire:</span>
-                              <span className="text-mint-dark font-semibold">{formatSalary(job)}</span>
+                              <span className="font-medium text-slate-500">Salaire:</span>
+                              <span className="text-emerald-600 font-semibold">{formatSalary(job)}</span>
                             </div>
                           )}
                         </div>
 
                         {/* Description */}
-                        <div className="pt-2 border-t border-gray-light">
-                          <h3 className="font-semibold text-graphite mb-2">Résumé / Description</h3>
-                          <p className="text-sm text-gray-dark leading-relaxed">
+                        <div className="pt-2 border-t border-slate-100">
+                          <h3 className="font-semibold text-slate-800 mb-2">Résumé / Description</h3>
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             {getJobDescriptionShort(job)}
                           </p>
                         </div>
 
                         {/* Bouton pour voir la fiche */}
-                        <div className="pt-2">
+                        <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={() => navigate(`/offres/${job.id}`)}
+                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                          >
+                            🔍 Détails
+                          </button>
                           <button
                             onClick={() => window.open(job.redirect_url, "_blank")}
-                            className="w-full px-6 py-3 rounded-2xl bg-indigo text-white font-medium shadow-sm hover:bg-indigo/90 transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche de poste

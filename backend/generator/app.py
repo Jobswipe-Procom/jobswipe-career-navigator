@@ -2,8 +2,9 @@ import os
 import sys
 import base64
 import traceback
+import time
 from typing import Dict, Any
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -69,6 +70,8 @@ async def generate_cover_letter(request: ApplicationRequest):
 
         return response_data
     except Exception as e:
+        print(f"ERREUR 500 dans /generate-cover-letter : {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/score-application")
@@ -82,6 +85,19 @@ async def score_application(request: ApplicationRequest):
     except Exception as e:
         print(f"ERREUR 500 dans /score-application : {e}")
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/score-fast")
+async def score_fast(request: ApplicationRequest):
+    """
+    Calcule un score rapide (heuristique) pour l'affichage en liste.
+    Retourne un entier entre 0 et 100.
+    """
+    try:
+        score = service.compute_fast_score(request.cv_data, request.offer_data)
+        return {"score": score}
+    except Exception as e:
+        print(f"ERREUR 500 dans /score-fast : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

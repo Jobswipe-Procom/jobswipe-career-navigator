@@ -303,3 +303,71 @@ if __name__ == "__main__":
     print("[INFO] Scoring compatibility with Gemini...")
     result = score_profile_with_gemini(offer_demo, cv_demo)
     print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+# ============================================================================
+# 6. SCORING HEURISTIQUE (RAPIDE)
+# ============================================================================
+
+def compute_heuristic_score(offer_parsed: Dict[str, Any], cv_parsed: Dict[str, Any]) -> int:
+    """
+    Calcule un score de compatibilité rapide (0-100) sans appel à l'IA.
+    Basé sur :
+    1. La couverture des Hard Skills (70%)
+    2. La présence des mots-clés du titre de l'offre dans le CV (30%)
+    """
+    # Helper pour normaliser (minuscules, sans espaces inutiles)
+    def normalize_set(items):
+        if not items: return set()
+        return {str(i).lower().strip() for i in items if i}
+
+    # 1. Extraction des données
+    offer_skills = normalize_set(offer_parsed.get("hard_skills", []))
+    
+    cv_skills_data = cv_parsed.get("skills", {})
+    # Gestion robuste si skills est une liste ou un dict
+    if isinstance(cv_skills_data, dict):
+        cv_skills = normalize_set(cv_skills_data.get("hard_skills", []))
+    elif isinstance(cv_skills_data, list):
+        cv_skills = normalize_set(cv_skills_data)
+    else:
+        cv_skills = set()
+
+    # 2. Score Compétences (Combien de skills demandés sont possédés ?)
+    skill_score = 0.0
+    if offer_skills:
+        intersection = offer_skills.intersection(cv_skills)
+        skill_score = (len(intersection) / len(offer_skills)) * 100
+    else:
+        # Si l'offre ne liste pas de hard_skills, on met un score neutre
+        skill_score = 50.0
+
+    # 3. Score Sémantique basique (Titre offre vs Contenu CV)
+    title_score = 0.0
+    offer_title = str(offer_parsed.get("title", "")).lower()
+    
+    if offer_title:
+        # Mots vides à ignorer pour ne garder que les mots importants
+        stop_words = {"h/f", "(h/f)", "f/h", "m/f", "-", "de", "le", "la", "les", "et", "ou", "pour", "stage", "alternance", "cdi", "cdd"}
+        offer_keywords = {w for w in offer_title.split() if w not in stop_words and len(w) > 2}
+        
+        # Construction du corpus CV (Résumé + Titres expériences)
+        cv_text = str(cv_parsed.get("raw_summary", "")).lower()
+        experiences = cv_parsed.get("professional_experiences", [])
+        if isinstance(experiences, list):
+            for exp in experiences:
+                cv_text += " " + str(exp.get("title", "")).lower()
+        
+        if offer_keywords:
+            matches = sum(1 for w in offer_keywords if w in cv_text)
+            title_score = (matches / len(offer_keywords)) * 100
+    
+    # 4. Pondération finale
+    if not offer_skills:
+        final_score = title_score
+    elif not offer_title:
+        final_score = skill_score
+    else:
+        final_score = (skill_score * 0.7) + (title_score * 0.3)
+
+    return int(min(100, max(0, final_score)))

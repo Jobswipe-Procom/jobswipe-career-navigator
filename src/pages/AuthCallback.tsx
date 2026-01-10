@@ -95,8 +95,12 @@ const AuthCallback = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-rose-400 via-pink-500 via-purple-500 to-indigo-600">
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full mx-4 text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 relative overflow-hidden">
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 text-center relative z-10 border border-slate-100">
         {error ? (
           <>
             <div className="text-red-600 mb-4">
@@ -118,11 +122,11 @@ const AuthCallback = () => {
           </>
         ) : (
           <>
-            <Loader2 className="w-12 h-12 mx-auto mb-4 text-mint animate-spin" />
-            <h2 className="text-xl font-semibold text-graphite mb-2">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 text-indigo-600 animate-spin" />
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
               Connexion en cours...
             </h2>
-            <p className="text-gray-medium">
+            <p className="text-slate-500">
               Veuillez patienter pendant que nous finalisons votre connexion.
             </p>
           </>
@@ -133,4 +137,3 @@ const AuthCallback = () => {
 };
 
 export default AuthCallback;
-

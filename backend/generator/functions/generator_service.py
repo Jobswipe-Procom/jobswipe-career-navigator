@@ -11,14 +11,14 @@ load_dotenv()
 try:
     from .cv_parsing import parse_cv_with_gemini
     from .job_offer_parser import parse_job_offer_gemini
-    from .compatibility import score_profile_with_gemini
+    from .compatibility import score_profile_with_gemini, compute_heuristic_score
     from .experience_generator import generate_full_cv_content
     from .cv_generator import generate_cv_html, convert_html_to_pdf
     from .cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
 except ImportError:
     from cv_parsing import parse_cv_with_gemini
     from job_offer_parser import parse_job_offer_gemini
-    from compatibility import score_profile_with_gemini
+    from compatibility import score_profile_with_gemini, compute_heuristic_score
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
     from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
@@ -37,9 +37,7 @@ class JobSwipeGeneratorService:
         """
         Helper pour parser les données brutes.
         """
-        print("[SERVICE] Parsing CV...")
         cv_parsed = parse_cv_with_gemini(cv_text)
-        print("[SERVICE] Parsing Offre...")
         offer_parsed = parse_job_offer_gemini(offer_text)
         return {
             "cv_parsed": cv_parsed,
@@ -61,7 +59,6 @@ class JobSwipeGeneratorService:
         results['offer_parsed'] = offer_parsed
 
         # 2. Génération Contenu CV (One-Shot)
-        print("[SERVICE] Génération du contenu du CV optimisé...")
         user_data = {
             "profile": {"summary": cv_parsed.get("raw_summary")},
             "experiences": cv_parsed.get("professional_experiences", []),
@@ -74,7 +71,6 @@ class JobSwipeGeneratorService:
         results['generated_content'] = generated_content
 
         # 3. Rendu PDF du CV
-        print("[SERVICE] Génération du PDF du CV...")
         full_cv_content = {
             "cv_title": {"cv_title": generated_content.get("cv_title")},
             "objective": {"objective": generated_content.get("objective")},
@@ -109,7 +105,6 @@ class JobSwipeGeneratorService:
         cv_base_name = f"cv_optimized_{uuid.uuid4().hex}"
         html_path = os.path.join(self.output_dir, f"{cv_base_name}.html")
         pdf_path = os.path.join(self.output_dir, f"{cv_base_name}.pdf")
-        print("pdf_path", pdf_path)
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_cv)
         
@@ -136,7 +131,6 @@ class JobSwipeGeneratorService:
         results['offer_parsed'] = offer_parsed
 
         # 2. Génération Lettre de Motivation
-        print("[SERVICE] Génération de la lettre de motivation...")
         cl_paths = generate_personalized_cover_letter_docx_and_pdf(
             offer_parsed=offer_parsed,
             cv_parsed=cv_parsed,
@@ -158,6 +152,15 @@ class JobSwipeGeneratorService:
         """
         Calcule le score de compatibilité via Gemini.
         """
-        print("[SERVICE] Calcul du score de compatibilité...")
         compatibility = score_profile_with_gemini(offer_data, cv_data)
         return compatibility
+
+    def compute_fast_score(
+        self, 
+        cv_data: Dict[str, Any],
+        offer_data: Dict[str, Any]
+    ) -> int:
+        """
+        Calcule un score heuristique rapide (0-100) pour l'affichage liste.
+        """
+        return compute_heuristic_score(offer_data, cv_data)

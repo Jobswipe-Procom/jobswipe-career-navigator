@@ -19,10 +19,10 @@ const HomePage = ({ session }: HomePageProps) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-rose-400 via-pink-500 via-purple-500 to-indigo-600 relative overflow-hidden">
-      {/* Pattern overlay subtil */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.1),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.08),transparent_50%)] pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       <div className="relative z-10">
         <LogoHeader />
@@ -31,10 +31,10 @@ const HomePage = ({ session }: HomePageProps) => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-semibold text-graphite mb-3">Bienvenue</h2>
-            <p className="text-gray-dark text-lg">Trouvez votre prochain emploi d'ingénieur</p>
+            <h2 className="text-4xl font-semibold text-slate-800 mb-3">Bienvenue</h2>
+            <p className="text-slate-600 text-lg">Trouvez votre prochain emploi d'ingénieur</p>
             {session.user.email && (
-              <p className="text-sm text-gray-medium mt-3">
+              <p className="text-sm text-slate-500 mt-3">
                 Connecté en tant que {session.user.email}
               </p>
             )}
@@ -42,26 +42,26 @@ const HomePage = ({ session }: HomePageProps) => {
 
           <div className="space-y-4">
             <button
-              onClick={() => navigate("/profil")}
-              className="w-full px-6 py-4 rounded-2xl bg-mint text-white font-medium shadow-sm hover:bg-mint-dark transition-all duration-200 ease-out flex items-center justify-center gap-2"
+              onClick={() => navigate("/jobswipe/offres")}
+              className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
             >
-              <User className="w-5 h-5" />
-              Mon profil
+              <Briefcase className="w-5 h-5" />
+              Commencer à swiper
             </button>
 
             <button
-              onClick={() => navigate("/jobswipe/offres")}
-              className="w-full px-6 py-4 rounded-2xl bg-indigo text-white font-medium shadow-sm hover:bg-indigo/90 transition-all duration-200 ease-out flex items-center justify-center gap-2"
+              onClick={() => navigate("/profil")}
+              className="w-full px-6 py-4 rounded-2xl bg-white text-slate-700 font-medium shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 hover:scale-[1.02] cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
             >
-              <Briefcase className="w-5 h-5" />
-              Jobswipe
+              <User className="w-5 h-5 text-indigo-600" />
+              Mon profil
             </button>
           </div>
 
           <div className="pt-4">
             <button
               onClick={handleSignOut}
-              className="w-full px-6 py-3 rounded-2xl bg-white text-gray-dark hover:bg-gray-light transition-all duration-200 ease-out border border-gray-light shadow-sm flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 rounded-2xl bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 ease-out flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Se déconnecter
@@ -74,4 +74,3 @@ const HomePage = ({ session }: HomePageProps) => {
 };
 
 export default HomePage;
-
