@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { Job } from "@/types/job";
 import { superlikeJob, getSuperlikedJobs } from "@/lib/swipes";
-import { Loader2, Heart, X, MapPin, Building2, Briefcase, ExternalLink, RotateCcw, Star, Home, Download } from "lucide-react";
+import { Loader2, Heart, X, MapPin, Building2, Briefcase, ExternalLink, RotateCcw, Star, Home, Download, Trash2 } from "lucide-react";
 import { JobSwipeScreen } from "@/components/swipe";
 import { OfferDetailModal } from "@/components/OfferDetailModal";
 import { useToast } from "@/hooks/use-toast";
@@ -110,6 +110,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // States pour la vue détaillée
   const [selectedOffer, setSelectedOffer] = useState<Job | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
+
+  // State pour la confirmation de suppression
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // State pour l'historique des swipes (pour le rewind)
   const [swipeHistory, setSwipeHistory] = useState<SwipeHistoryItem[]>([]);
@@ -706,7 +709,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   };
 
   const handleImportOffer = () => {
-      console.log("Demande d'importation d'offre envoyée à l'extension...");
       // Demander l'offre à l'extension
       window.postMessage({ type: "JOBSWIPE_REQUEST_OFFER" }, "*");
       
@@ -714,7 +716,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const handler = async (event: MessageEvent) => {
           if (event.source !== window) return;
           if (event.data.type === "JOBSWIPE_OFFER_DATA") {
-              console.log("Réponse de l'extension reçue :", event.data);
               window.removeEventListener("message", handler);
               const offerData = event.data.payload;
               
@@ -724,7 +725,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   return;
               }
               
-              console.log("Données de l'offre à importer :", offerData);
               
               try {
                   setLoading(true);
@@ -732,7 +732,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   
                   // 1. Parser l'offre via le backend
                   const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-                  console.log(`Appel du backend pour parsing : ${apiUrl}/parse-job`);
                   const res = await fetch(`${apiUrl}/parse-job`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -746,10 +745,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                       throw new Error(`Erreur API (${res.status}): ${await res.text()}`);
                   }
                   const parsedJob = await res.json();
-                  console.log("Offre parsée par le backend :", parsedJob);
                   
                   // 2. Créer le job dans Supabase
-                  console.log("Insertion de l'offre dans Supabase...");
                   
                   // On prépare la description et on l'ajoute au JSON raw pour être sûr de la conserver
                   const descriptionContent = parsedJob.missions?.join('\n') || offerData.description;
@@ -775,10 +772,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                       .single();
                       
                   if (jobError) throw jobError;
-                  console.log("Offre insérée avec succès :", jobData);
                   
                   // 3. Liker l'offre
-                  console.log("Ajout du like pour l'offre...");
                   await saveSwipeToSupabase("like", jobData.id, false);
                   
                   toast({ description: "Offre importée et ajoutée aux likes !" });
@@ -801,6 +796,46 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       setTimeout(() => window.removeEventListener("message", handler), 5000);
   };
 
+  // Handler pour initier la suppression (ouvre la modale)
+  const handleRemoveSwipe = (jobId: string) => {
+    setConfirmDeleteId(jobId);
+  };
+
+  // Handler pour exécuter la suppression après confirmation
+  const executeRemoveSwipe = async () => {
+    if (!confirmDeleteId) return;
+    const jobId = confirmDeleteId;
+    setConfirmDeleteId(null);
+
+    try {
+      const { error } = await (supabase as any)
+        .from("swipes")
+        .delete()
+        .eq("user_id", userId)
+        .eq("job_id", jobId);
+
+      if (error) {
+        console.error("Error deleting swipe:", error);
+        toast({ variant: "destructive", description: "Erreur lors de la suppression." });
+      } else {
+        toast({ description: "Offre retirée avec succès." });
+        
+        // Mise à jour de l'état local
+        if (activeTab === "liked") {
+          setLikedJobs((prev) => prev.filter((job) => job.id !== jobId));
+        } else if (activeTab === "superliked") {
+          setSuperlikedJobs((prev) => prev.filter((job) => job.id !== jobId));
+        }
+        
+        // Recharger le compteur de likes du jour
+        loadLikesToday();
+      }
+    } catch (err) {
+      console.error("Error in executeRemoveSwipe:", err);
+      toast({ variant: "destructive", description: "Une erreur inattendue s'est produite." });
+    }
+  };
+
   const formatSalary = (job: Job) => {
     if (job.salary_min && job.salary_max) {
       return `${job.salary_min}€ - ${job.salary_max}€`;
@@ -808,6 +843,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       return `À partir de ${job.salary_min}€`;
     } else if (job.salary_max) {
       return `Jusqu'à ${job.salary_max}€`;
+    }
+    if (job.raw?.salary) {
+      return job.raw.salary;
     }
     return null;
   };
@@ -1202,10 +1240,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 <span className="text-slate-800">{job.secteur}</span>
                               </div>
                             )}
-                            {job.niveau && (
+                            {(job.niveau || job.raw?.seniority_level) && (
                               <div className="flex items-center gap-2 text-sm">
                                 <span className="font-medium text-slate-500">Niveau:</span>
-                                <span className="text-slate-800">{job.niveau}</span>
+                                <span className="text-slate-800">{job.niveau || job.raw?.seniority_level}</span>
                               </div>
                             )}
                             {job.famille && (
@@ -1222,6 +1260,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             </div>
                           )}
                         </div>
+
+                        {/* Mots clés */}
+                        {job.raw?.keywords && Array.isArray(job.raw.keywords) && job.raw.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-2">
+                            {job.raw.keywords.slice(0, 5).map((keyword: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs font-normal bg-slate-50 text-slate-600 border-slate-200">{keyword}</Badge>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Description */}
                         <div className="pt-2 border-t border-slate-100">
@@ -1245,6 +1292,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche
+                          </button>
+                          <button
+                            onClick={() => handleRemoveSwipe(job.id)}
+                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
+                            title="Retirer des favoris"
+                          >
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -1311,10 +1365,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 <span className="text-slate-800">{job.secteur}</span>
                               </div>
                             )}
-                            {job.niveau && (
+                            {(job.niveau || job.raw?.seniority_level) && (
                               <div className="flex items-center gap-2 text-sm">
                                 <span className="font-medium text-slate-500">Niveau:</span>
-                                <span className="text-slate-800">{job.niveau}</span>
+                                <span className="text-slate-800">{job.niveau || job.raw?.seniority_level}</span>
                               </div>
                             )}
                             {job.famille && (
@@ -1331,6 +1385,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             </div>
                           )}
                         </div>
+
+                        {/* Mots clés */}
+                        {job.raw?.keywords && Array.isArray(job.raw.keywords) && job.raw.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-2">
+                            {job.raw.keywords.slice(0, 5).map((keyword: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs font-normal bg-slate-50 text-slate-600 border-slate-200">{keyword}</Badge>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Description */}
                         <div className="pt-2 border-t border-slate-100">
@@ -1355,6 +1418,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche de poste
                           </button>
+                          <button
+                            onClick={() => handleRemoveSwipe(job.id)}
+                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
+                            title="Retirer des superlikes"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1374,6 +1444,38 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         formatSalary={formatSalary}
         getJobDescription={getJobDescriptionFull}
       />
+
+      {/* Modal de confirmation de suppression */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200 p-6 border border-slate-100">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Retirer cette offre ?</h3>
+              <p className="text-slate-600">
+                Êtes-vous sûr de vouloir retirer cette offre de votre liste ? Cette action est irréversible.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition-all duration-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={executeRemoveSwipe}
+                className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg shadow-red-200 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Retirer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
