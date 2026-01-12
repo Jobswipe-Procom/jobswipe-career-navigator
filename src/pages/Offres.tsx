@@ -38,7 +38,7 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
 
     const fetchScore = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const apiUrl = import.meta.env.VITE_API_URL;
         const res = await fetch(`${apiUrl}/score-fast`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -249,7 +249,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
 
     const fetchCurrentScore = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const apiUrl = import.meta.env.VITE_API_URL;
         const res = await fetch(`${apiUrl}/score-fast`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -733,7 +733,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   toast({ description: "Analyse de l'offre importée..." });
                   
                   // 1. Parser l'offre via le backend
-                  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+                  const apiUrl = import.meta.env.VITE_API_URL;
                   const res = await fetch(`${apiUrl}/parse-job`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

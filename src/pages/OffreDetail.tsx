@@ -232,7 +232,7 @@ const OffreDetail = () => {
         // Utiliser les données brutes si disponibles pour avoir les hard_skills
         const offerData = { ...job, ...(job.raw || {}) };
         
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const API_URL = import.meta.env.VITE_API_URL;
         const res = await fetch(`${API_URL}/score-fast`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -309,7 +309,7 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const API_URL = import.meta.env.VITE_API_URL;
 
       let cvResult = existingDocs.cv;
       let clResult = existingDocs.cl;
@@ -390,7 +390,7 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/generate-cv`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -454,7 +454,7 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/generate-cover-letter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
