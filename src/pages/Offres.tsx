@@ -31,9 +31,15 @@ interface SwipeHistoryItem {
 
 // Composant pour afficher le score de compatibilité dans les listes
 const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
-  const [score, setScore] = useState<number | null>(null);
+  const [score, setScore] = useState<number | null>((job as any).score ?? null);
 
   useEffect(() => {
+    // Si le job a un score pré-calculé (ex: import), on l'utilise
+    if ((job as any).score !== undefined && (job as any).score !== null) {
+        setScore((job as any).score);
+        return;
+    }
+
     if (!job || !cvData) return;
 
     const fetchScore = async () => {
@@ -838,6 +844,26 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     niveau: parsedJob.seniority_level,
                     famille: parsedJob.famille
                   };
+                  
+                  // --- CALCUL DU SCORE (Batch Match Offers via /score-fast) ---
+                  if (userCvData) {
+                      try {
+                          const scoreRes = await fetch(`${API_URL}/score-fast`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ 
+                                  cv_data: userCvData, 
+                                  offer_data: { ...newJob, ...rawData } 
+                              })
+                          });
+                          if (scoreRes.ok) {
+                              const scoreData = await scoreRes.json();
+                              newJob.score = scoreData.score;
+                          }
+                      } catch (e) {
+                          console.error("Erreur calcul score import:", e);
+                      }
+                  }
                   
                   // 3. Sauvegarder dans le localStorage
                   const localJobs = JSON.parse(localStorage.getItem("JOBSWIPE_LOCAL_IMPORTED_JOBS") || "[]");
