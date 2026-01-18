@@ -37,6 +37,7 @@ const OffreDetail = () => {
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [showConfirmUnapply, setShowConfirmUnapply] = useState(false);
   const [isSuperlike, setIsSuperlike] = useState(false);
+  const [isImported, setIsImported] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -155,9 +156,11 @@ const OffreDetail = () => {
       
       if (localJob) {
         setJob(localJob);
+        setIsImported(true);
         return;
       }
 
+      setIsImported(false);
       const data = await fetchJobById(jobId);
       setJob(data);
     } catch (error) {
@@ -670,12 +673,12 @@ const OffreDetail = () => {
   };
 
   const handleBack = () => {
-    if (applicationStatus === 'liked' || applicationStatus === 'superliked') {
-      navigate('/jobswipe/offres', { 
-        state: { 
-          initialView: isSuperlike ? 'superliked' : 'liked' 
-        } 
-      });
+    if (isSuperlike) {
+      navigate('/jobswipe/offres', { state: { initialView: 'superliked' } });
+    } else if (isImported) {
+      navigate('/jobswipe/offres', { state: { initialView: 'imported' } });
+    } else if (applicationStatus) {
+      navigate('/jobswipe/offres', { state: { initialView: 'liked' } });
     } else {
       navigate(-1);
     }

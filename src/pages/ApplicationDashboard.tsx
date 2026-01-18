@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 
-type ApplicationStatus = "liked" | "superliked" | "applied" | "interview" | "job_offer" | "accepted" | "rejected";
+type ApplicationStatus = "imported" | "liked" | "superliked" | "applied" | "interview" | "job_offer" | "accepted" | "rejected";
 
 interface Application {
   id: string;
@@ -33,6 +33,7 @@ interface Application {
   rejectionStage?: 'before_interview' | 'after_interview';
   offerDeadline?: Date;
   dates: {
+    imported?: Date;
     liked: Date;
     superliked?: Date;
     applied?: Date;
@@ -47,6 +48,7 @@ interface Application {
 const initialApplications: Application[] = [];
 
 const statusLabels: Record<ApplicationStatus, string> = {
+  imported: "Importée",
   liked: "Likée",
   superliked: "Superlikée",
   applied: "Postulée",
@@ -57,6 +59,7 @@ const statusLabels: Record<ApplicationStatus, string> = {
 };
 
 const statusColors: Record<ApplicationStatus, string> = {
+  imported: "bg-emerald-50 border-emerald-200",
   liked: "bg-gray-100 border-gray-200",
   superliked: "bg-amber-100 border-amber-200",
   applied: "bg-blue-100 border-blue-200",
@@ -66,8 +69,8 @@ const statusColors: Record<ApplicationStatus, string> = {
   rejected: "bg-red-100 border-red-200",
 }
 
-const columns: ApplicationStatus[] = ["liked", "superliked", "applied", "interview", "job_offer", "accepted", "rejected"];
-const offerColumns: ApplicationStatus[] = ["liked", "superliked", "applied"];
+const columns: ApplicationStatus[] = ["imported", "liked", "superliked", "applied", "interview", "job_offer", "accepted", "rejected"];
+const offerColumns: ApplicationStatus[] = ["imported", "liked", "superliked", "applied"];
 const applicationColumns: ApplicationStatus[] = ["applied", "interview", "job_offer", "accepted", "rejected"];
 
 const KpiCard = ({ title, value, rate }: { title: string, value: string | number, rate?: string }) => (
@@ -160,8 +163,25 @@ const ApplicationDashboard: React.FC = () => {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
+        // Récupérer les offres importées localement
+        const localJobs: any[] = JSON.parse(localStorage.getItem("JOBSWIPE_LOCAL_IMPORTED_JOBS") || "[]");
+        const importedApps: Application[] = localJobs.map(job => ({
+            id: job.id,
+            company: job.company || "Entreprise inconnue",
+            title: job.title || "Poste inconnu",
+            status: 'imported',
+            isSuperlike: false,
+            dates: {
+                imported: new Date(job.created_at),
+                liked: new Date(job.created_at) // Fallback
+            }
+        }));
+
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+            setApplications(importedApps);
+            return;
+        }
 
         // Récupérer les swipes (likes et superlikes) avec les détails du job
         const { data, error } = await supabase
@@ -200,7 +220,7 @@ const ApplicationDashboard: React.FC = () => {
               [item.status || (item.is_superlike ? 'superliked' : 'liked')]: new Date(item.updated_at || item.created_at)
             }
           }));
-          setApplications(mappedApps);
+          setApplications([...importedApps, ...mappedApps]);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des candidatures:", error);
@@ -255,6 +275,20 @@ const ApplicationDashboard: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+
+    // Vérifier d'abord si c'est une offre locale
+    const localJobs: any[] = JSON.parse(localStorage.getItem("JOBSWIPE_LOCAL_IMPORTED_JOBS") || "[]");
+    const localIndex = localJobs.findIndex(j => j.id === itemToDelete);
+    
+    if (localIndex !== -1) {
+        localJobs.splice(localIndex, 1);
+        localStorage.setItem("JOBSWIPE_LOCAL_IMPORTED_JOBS", JSON.stringify(localJobs));
+        setApplications(prev => prev.filter(a => a.id !== itemToDelete));
+        toast.success("Candidature importée supprimée.");
+        setShowDeleteModal(false);
+        setItemToDelete(null);
+        return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -498,6 +532,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
     const data: Record<string, { 
       date: string; 
       timestamp: number; 
+      imported: number;
       liked: number; 
       superliked: number;
             applied: number; 
@@ -516,6 +551,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                 data[dateStr] = { 
                   date: dateStr, 
                   timestamp: dateObj.setHours(0,0,0,0),
+                  imported: 0,
                   liked: 0, 
                   superliked: 0,
                   applied: 0, 
@@ -529,6 +565,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
               data[dateStr][type]++;
             };
       
+            processDate(app.dates.imported, 'imported');
             processDate(app.dates.liked, 'liked');
             if (app.isSuperlike) processDate(app.dates.liked, 'superliked'); // On utilise la date de like pour le superlike
             processDate(app.dates.applied, 'applied');
@@ -544,6 +581,9 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
     const transitions: { status: ApplicationStatus | 'delete' | 'new_interview' | 'response_received', label: string, icon?: any }[] = [];
 
     switch (app.status) {
+      case 'imported':
+        transitions.push({ status: 'applied', label: 'Postuler', icon: Briefcase });
+        break;
       case 'liked':
       case 'superliked':
         transitions.push({ status: 'applied', label: 'Postuler', icon: Briefcase });
@@ -574,7 +614,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
         break;
     }
 
-    if (app.status !== 'liked' && app.status !== 'superliked') {
+    if (app.status !== 'liked' && app.status !== 'superliked' && app.status !== 'imported') {
         transitions.push({ 
             status: app.isSuperlike ? 'superliked' : 'liked', 
             label: 'Retour aux likes', 
@@ -653,6 +693,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
             <EvolutionChart 
               data={getChartData()} 
               lines={[
+                { key: "imported", color: "#10b981", name: "Importée" },
                 { key: "liked", color: "#94a3b8", name: "Likée" },
                 { key: "superliked", color: "#fbbf24", name: "Superlikée" },
                 { key: "applied", color: "#3b82f6", name: "Postulée" },
