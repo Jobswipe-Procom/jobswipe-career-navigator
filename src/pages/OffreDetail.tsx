@@ -744,6 +744,34 @@ const OffreDetail = () => {
     return schema;
   };
 
+  // Generate BreadcrumbList schema for navigation hierarchy
+  const generateBreadcrumbSchema = (job: Job) => {
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Accueil",
+          "item": window.location.origin
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Offres d'emploi",
+          "item": `${window.location.origin}/#/jobswipe/offres`
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": `${job.title} chez ${job.company}`,
+          "item": `${window.location.origin}${window.location.pathname}${window.location.hash}`
+        }
+      ]
+    };
+  };
+
   const mapContractTypeToSchema = (contractType: string): string => {
     const mapping: { [key: string]: string } = {
       "CDI": "FULL_TIME",
@@ -762,7 +790,7 @@ const OffreDetail = () => {
           title={`${job.title} chez ${job.company}`}
           description={`Postulez à ${job.title} chez ${job.company} à ${job.location}. ${job.contract_type}. Découvrez les détails de l'offre.`}
           canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
-          jsonLd={generateJobSchema(job)}
+          jsonLd={[generateJobSchema(job), generateBreadcrumbSchema(job)]}
         />
       )}
       {/* Bordures colorées subtiles sur les côtés */}
