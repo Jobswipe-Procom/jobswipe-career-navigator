@@ -29,13 +29,30 @@ const HomePage = ({ session }: HomePageProps) => {
     "foundingDate": "2025"
   };
 
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "JobSwipe",
+    "url": window.location.origin,
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${window.location.origin}/#/jobswipe/offres?search={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
+  };
+
+  const schemas = [organizationSchema, websiteSchema];
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Trouvez votre emploi d'ingénieur idéal"
         description="Plateforme de recherche d'emploi pour ingénieurs débutants et confirmés. Recommandations intelligentes, suivi simplifié, candidatures en un clic."
         canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
-        jsonLd={organizationSchema}
+        jsonLd={schemas}
       />
       {/* Bordures colorées subtiles sur les côtés */}
       <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
