@@ -704,6 +704,57 @@ const OffreDetail = () => {
     );
   }
 
+  // Generate JobPosting schema for rich results
+  const generateJobSchema = (job: Job) => {
+    const schema: any = {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      "title": job.title,
+      "description": job.raw?.description || `Offre d'emploi: ${job.title} chez ${job.company}`,
+      "datePosted": job.created_at,
+      "hiringOrganization": {
+        "@type": "Organization",
+        "name": job.company
+      },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": job.location,
+          "addressCountry": "FR"
+        }
+      },
+      "employmentType": mapContractTypeToSchema(job.contract_type)
+    };
+
+    // Add salary if available
+    if (job.salary_min && job.salary_max) {
+      schema.baseSalary = {
+        "@type": "MonetaryAmount",
+        "currency": "EUR",
+        "value": {
+          "@type": "QuantitativeValue",
+          "minValue": job.salary_min,
+          "maxValue": job.salary_max,
+          "unitText": "YEAR"
+        }
+      };
+    }
+
+    return schema;
+  };
+
+  const mapContractTypeToSchema = (contractType: string): string => {
+    const mapping: { [key: string]: string } = {
+      "CDI": "FULL_TIME",
+      "CDD": "TEMPORARY",
+      "Stage": "INTERN",
+      "Alternance": "INTERN",
+      "Freelance": "CONTRACTOR"
+    };
+    return mapping[contractType] || "OTHER";
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 relative">
       {job && (
@@ -711,6 +762,7 @@ const OffreDetail = () => {
           title={`${job.title} chez ${job.company}`}
           description={`Postulez à ${job.title} chez ${job.company} à ${job.location}. ${job.contract_type}. Découvrez les détails de l'offre.`}
           canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
+          jsonLd={generateJobSchema(job)}
         />
       )}
       {/* Bordures colorées subtiles sur les côtés */}
