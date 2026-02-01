@@ -864,8 +864,8 @@ const OffreDetail = () => {
             )}
 
             <div>
-              <h3 className="font-semibold text-foreground mb-2">Intitulé de la mission</h3>
-              <p className="text-foreground">{job.title}</p>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{job.title}</h1>
+              <p className="text-sm text-muted-foreground">Offre d'emploi</p>
             </div>
 
             <div>

@@ -37,7 +37,7 @@ const Dashboard = () => {
       <div className="px-6 py-8 max-w-2xl mx-auto">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Mon tableau de bord</CardTitle>
+            <h1 className="text-2xl font-bold">Mon tableau de bord</h1>
           </CardHeader>
 
           <CardContent className="space-y-8">
