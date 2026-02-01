@@ -19,12 +19,23 @@ const HomePage = ({ session }: HomePageProps) => {
     // La session sera mise à jour automatiquement via onAuthStateChange dans App.tsx
   };
 
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "JobSwipe",
+    "url": window.location.origin,
+    "logo": `${window.location.origin}/icons/icon-512.png`,
+    "description": "Plateforme de recherche d'emploi pour ingénieurs débutants et confirmés",
+    "foundingDate": "2025"
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Trouvez votre emploi d'ingénieur idéal"
         description="Plateforme de recherche d'emploi pour ingénieurs débutants et confirmés. Recommandations intelligentes, suivi simplifié, candidatures en un clic."
         canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
+        jsonLd={organizationSchema}
       />
       {/* Bordures colorées subtiles sur les côtés */}
       <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
@@ -37,8 +48,10 @@ const HomePage = ({ session }: HomePageProps) => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-semibold text-slate-800 mb-3">Bienvenue</h2>
-            <p className="text-slate-600 text-lg">Trouvez votre prochain emploi d'ingénieur</p>
+            <h1 className="text-4xl font-semibold text-slate-800 mb-3">
+              Trouvez votre emploi d'ingénieur idéal
+            </h1>
+            <p className="text-slate-600 text-lg">Recommandations intelligentes pour votre carrière</p>
             {session.user.email && (
               <p className="text-sm text-slate-500 mt-3">
                 Connecté en tant que {session.user.email}
