@@ -5,6 +5,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { User, Briefcase, LogOut, LayoutDashboard } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { SEOHead } from "@/components/seo";
 
 interface HomePageProps {
   session: Session;
@@ -20,6 +21,11 @@ const HomePage = ({ session }: HomePageProps) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+      <SEOHead
+        title="Trouvez votre emploi d'ingénieur idéal"
+        description="Plateforme de recherche d'emploi pour ingénieurs débutants et confirmés. Recommandations intelligentes, suivi simplifié, candidatures en un clic."
+        canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
+      />
       {/* Bordures colorées subtiles sur les côtés */}
       <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
