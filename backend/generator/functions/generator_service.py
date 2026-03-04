@@ -11,14 +11,14 @@ load_dotenv()
 try:
     from .cv_parsing import parse_cv_with_gemini, extract_text_from_file
     from .job_offer_parser import parse_job_offer_gemini
-    from .compatibility import score_profile_with_gemini, compute_heuristic_score
+    from .compatibility import score_profile_with_gemini
     from .experience_generator import generate_full_cv_content
     from .cv_generator import generate_cv_html, convert_html_to_pdf
     from .cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
 except ImportError:
     from cv_parsing import parse_cv_with_gemini, extract_text_from_file
     from job_offer_parser import parse_job_offer_gemini
-    from compatibility import score_profile_with_gemini, compute_heuristic_score
+    from compatibility import score_profile_with_gemini
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
     from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf

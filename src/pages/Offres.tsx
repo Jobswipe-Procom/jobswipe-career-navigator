@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { Job } from "@/types/job";
 import { superlikeJob, getSuperlikedJobs } from "@/lib/swipes";
-import { Loader2, Heart, X, MapPin, Building2, Briefcase, ExternalLink, RotateCcw, Star, Home, Download, Trash2, User, LayoutDashboard } from "lucide-react";
+import { Loader2, Heart, X, MapPin, Building2, Briefcase, ExternalLink, RotateCcw, Star, Home, Download, Trash2, User, LayoutDashboard, RefreshCw } from "lucide-react";
 import { JobSwipeScreen } from "@/components/swipe";
 import { OfferDetailModal } from "@/components/OfferDetailModal";
 import { useToast } from "@/hooks/use-toast";
@@ -87,7 +87,7 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
       style={style}
     >
       <span className="text-xs font-normal opacity-80">Match</span>
-      {score}%
+      {Math.round(score)}%
     </div>
   );
 };
@@ -342,7 +342,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     return () => clearInterval(interval);
   }, [limitReached, activeTab]);
 
-  const loadUnswipedJobs = async () => {
+  const loadUnswipedJobs = async (force: boolean = false) => {
     console.log("🔄 [JobSwipe] Démarrage du chargement des offres...");
     try {
       if (!userCvData) {
@@ -369,13 +369,39 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       const swipedJobIds = swipesData?.map((swipe) => swipe.job_id) || [];
       console.log(`✅ [JobSwipe] ${swipedJobIds.length} offres déjà swipées trouvées.`);
       
+      let finalJobs: Job[] = [];
+      let usedCache = false;
+
+      // 1. Tenter de charger depuis le cache si pas de force refresh
+      if (!force) {
+        const cachedFeed = localStorage.getItem("JOBSWIPE_FEED_CACHE");
+        if (cachedFeed) {
+          try {
+            const parsedCache = JSON.parse(cachedFeed);
+            // Filtrer les jobs du cache qui ont été swipés entre temps
+            const validCache = parsedCache.filter((j: Job) => !swipedJobIds.includes(j.id));
+            
+            if (validCache.length > 0) {
+              console.log(`📦 [JobSwipe] ${validCache.length} offres récupérées du cache.`);
+              finalJobs = validCache;
+              usedCache = true;
+            }
+          } catch (e) {
+            console.error("Erreur lecture cache", e);
+            localStorage.removeItem("JOBSWIPE_FEED_CACHE");
+          }
+        }
+      }
+
+      if (!usedCache) {
+      
       // Récupérer les jobs non swipés en excluant ceux déjà swipés dans la requête
       console.log("📡 [JobSwipe] Récupération des offres récentes depuis Supabase...");
       let query = (supabase as any)
         .from("jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50); // Récupérer plus pour avoir assez après filtrage
+        .limit(200); // Récupérer plus pour avoir assez après filtrage
 
       const { data: jobsData, error: jobsError } = await query;
 
@@ -437,7 +463,16 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       }
 
       // On ne garde que les 20 premiers APRES le tri par pertinence
-      const finalJobs = sortedJobs.slice(0, 20);
+      finalJobs = sortedJobs.slice(0, 40);
+      
+      // Sauvegarder dans le cache
+      localStorage.setItem("JOBSWIPE_FEED_CACHE", JSON.stringify(finalJobs));
+      
+      if (force) {
+        toast({ description: "Offres rafraîchies et scores recalculés !" });
+      }
+      }
+
       console.log(`✨ [JobSwipe] Affichage de ${finalJobs.length} offres.`);
       setJobs(finalJobs);
       setCurrentIndex(0); // Reset l'index quand on charge de nouvelles offres
@@ -792,7 +827,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         .from("jobs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50); // Récupérer plus pour avoir assez après filtrage
+        .limit(200); // Récupérer plus pour avoir assez après filtrage
 
       if (jobsError) {
         console.error("Error fetching jobs:", jobsError);
@@ -802,7 +837,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       // Filtrer les jobs non swipés (tous les temps)
       const unswipedJobs = (jobsData || []).filter(
         (job) => !swipedJobIds.includes(job.id)
-      ).slice(0, 20); // Limiter à 20 après filtrage
+      ).slice(0, 40); // Limiter à 40 après filtrage
 
       setJobs(unswipedJobs);
     } catch (err) {
@@ -1172,6 +1207,16 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               <Download className="w-4 h-4" />
               Importer
             </button>
+            {activeTab === "all" && (
+              <button
+                onClick={() => loadUnswipedJobs(true)}
+                className="px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-105 cursor-pointer flex items-center gap-2"
+                title="Rafraîchir les offres et recalculer les scores"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Rafraîchir
+              </button>
+            )}
           </div>
 
           {/* Message d'erreur - Style amélioré */}
