@@ -87,7 +87,7 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
       style={style}
     >
       <span className="text-xs font-normal opacity-80">Match</span>
-      {score}%
+      {Math.round(score)}%
     </div>
   );
 };
