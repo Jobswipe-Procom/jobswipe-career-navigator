@@ -8,7 +8,7 @@ import { fetchJobById } from "@/lib/supabase";
 import { supabase } from "@/lib/supabaseClient";
 import { Job } from "@/types/job";
 import { Profile } from "@/types/profile";
-import { Loader2, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Lightbulb, Briefcase, GraduationCap } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Lightbulb, Briefcase, GraduationCap, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SEOHead } from "@/components/seo";
 
@@ -79,7 +79,7 @@ const OffreScore = () => {
     };
   };
 
-  const loadJobAndCalculateScore = async (jobId: string) => {
+  const loadJobAndCalculateScore = async (jobId: string, force: boolean = false) => {
     try {
       setLoading(true);
       
@@ -94,6 +94,21 @@ const OffreScore = () => {
         jobData = await fetchJobById(jobId);
       }
       setJob(jobData!);
+
+      // Check cache if not forced
+      if (!force) {
+        const cachedScore = localStorage.getItem(`jobswipe_score_${jobId}`);
+        if (cachedScore) {
+          try {
+            setScoreData(JSON.parse(cachedScore));
+            setLoading(false);
+            return;
+          } catch (e) {
+            console.error("Error parsing cached score", e);
+            localStorage.removeItem(`jobswipe_score_${jobId}`);
+          }
+        }
+      }
 
       // 2. Charger le profil complet
       const { data: { user } } = await supabase.auth.getUser();
@@ -136,6 +151,7 @@ const OffreScore = () => {
       
       const result = await response.json();
       setScoreData(result);
+      localStorage.setItem(`jobswipe_score_${jobId}`, JSON.stringify(result));
 
     } catch (error) {
       console.error("Error loading job:", error);
@@ -361,10 +377,19 @@ const OffreScore = () => {
               </div>
             )}
 
-            <PrimaryButton onClick={() => navigate(`/offres/${id}`)}>
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Retour
-            </PrimaryButton>
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <PrimaryButton onClick={() => navigate(`/offres/${id}`)} className="flex-1">
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Retour
+              </PrimaryButton>
+              <PrimaryButton 
+                onClick={() => id && loadJobAndCalculateScore(id, true)} 
+                className="flex-1 bg-white text-indigo-600 border-2 border-indigo-100 hover:bg-indigo-50 hover:border-indigo-200"
+              >
+                <RefreshCw className="w-5 h-5 mr-2" />
+                Refaire l'analyse
+              </PrimaryButton>
+            </div>
           </CardContent>
         </Card>
       </div>
