@@ -41,3 +41,4 @@ cover_letter/
 *.pdf
 *.docx
 *.html
+.vercel
