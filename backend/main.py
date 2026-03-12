@@ -5,7 +5,17 @@ import os
 
 app = FastAPI(title="JobBot Alternance API", version="0.1.0")
 
+# CORS : base sur ALLOW_ORIGINS, puis ajoute quelques origines de dev utiles
 origins = os.getenv("ALLOW_ORIGINS", "http://localhost:19006").split(",")
+extra_origins = [
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://192.168.1.3:8081",
+]
+for origin in extra_origins:
+    if origin not in origins:
+        origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
