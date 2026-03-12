@@ -1138,7 +1138,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 relative">
+    <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Offres d'emploi pour ingénieurs"
         description="Découvrez des centaines d'offres d'emploi pour ingénieurs débutants et confirmés. Postulez en un clic à votre futur poste."
@@ -1183,7 +1183,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
           <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1">
             <button
               onClick={cycleTab}
-              className="px-5 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
+              className="px-5 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-indigo-600 text-white sm:shadow-lg sm:shadow-indigo-200 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
             >
               <Briefcase className="w-4 h-4" />
               <span className="hidden sm:inline">
@@ -1252,7 +1252,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
           {/* Contenu selon l'onglet actif */}
           {activeTab === "all" ? (
             // Onglet "Toutes les offres" - Style app de dating
-            <div className="flex items-start justify-center py-2 sm:py-4 min-h-0">
+            <div className="flex items-start justify-center pt-0 pb-2 sm:py-4 min-h-0">
               <div className="w-full max-w-md sm:max-w-[850px] mx-auto">
                 {jobs.length === 0 || currentIndex >= jobs.length ? (
                   <div className="text-center py-12">
@@ -1303,7 +1303,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6 py-4">
+                  <div className="space-y-2 sm:space-y-6 py-0 sm:py-4">
                     {/* Carte swipeable - Style Tinder */}
                     {(() => {
                       const currentOffer = jobs[currentIndex];
@@ -1414,7 +1414,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
 
                               {/* Compteur d'offres restantes */}
                               {currentIndex < jobs.length - 1 && (
-                                <p className="text-center text-sm text-slate-400 pt-1">
+                                <p className="text-center text-sm text-slate-400 mt-0">
                                   {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
                                 </p>
                               )}
