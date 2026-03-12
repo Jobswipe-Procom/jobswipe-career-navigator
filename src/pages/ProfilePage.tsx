@@ -559,9 +559,9 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         description="Gérez votre profil professionnel"
         noindex={true}
       />
-      {/* Bordures colorées subtiles sur les côtés */}
-      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
-      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      {/* Bordures colorées subtiles sur les côtés (désactivées sur mobile pour éviter le débordement) */}
+      <div className="hidden md:block fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="hidden md:block fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       {/* Navigation - Fixe en haut à droite */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
@@ -592,9 +592,9 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         <LogoHeader />
       </div>
       
-      <div className="px-6 py-8 max-w-4xl mx-auto relative z-10">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-4xl mx-auto relative z-10">
         {/* En-tête avec titre et bouton de sauvegarde */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
               <User className="w-6 h-6 text-indigo-600" />
@@ -607,8 +607,8 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
             </div>
           </div>
 
-          {/* Bouton Import CV */}
-          <div className="flex gap-2">
+          {/* Boutons Import CV & Sauvegarde */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <input
               type="file"
               ref={fileInputRef}
@@ -619,17 +619,17 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing || saving}
-              className="px-4 py-3 rounded-2xl font-medium bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-3 rounded-2xl font-medium bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-              <span className="hidden sm:inline">Importer mon CV</span>
+              <span className="text-sm sm:text-base">Importer mon CV</span>
             </button>
 
           {/* Bouton de sauvegarde avec feedback */}
           <button
             onClick={saveProfile}
             disabled={saving}
-            className={`px-6 py-3 rounded-2xl font-medium shadow-sm transition-all duration-200 ease-out flex items-center gap-2 ${
+            className={`w-full sm:w-auto px-6 py-3 rounded-2xl font-medium shadow-sm transition-all duration-200 ease-out flex items-center justify-center gap-2 ${
               saveStatus === "success"
                 ? "bg-green-500 text-white"
                 : saveStatus === "error"

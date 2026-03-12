@@ -249,8 +249,8 @@ export const JobCard = React.memo(({
             </div>
           </motion.div>
 
-          {/* Zone Hero Image (60% de la hauteur) */}
-          <div className="relative h-[60%] min-h-[300px] max-h-[360px] overflow-hidden">
+          {/* Zone Hero Image (plus compacte sur mobile) */}
+          <div className="relative h-[50%] sm:h-[60%] min-h-[160px] sm:min-h-[300px] max-h-[200px] sm:max-h-[360px] overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.1),transparent_50%)]" />

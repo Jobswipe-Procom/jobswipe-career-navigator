@@ -101,6 +101,21 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // State pour l'onglet actif
   const [activeTab, setActiveTab] = useState<"all" | "liked" | "superliked" | "imported">("all");
 
+  // Ordre et labels des onglets pour le bouton unique
+  const tabOrder: Array<"all" | "liked" | "superliked" | "imported"> = [
+    "all",
+    "liked",
+    "superliked",
+    "imported",
+  ];
+
+  const tabLabels: Record<"all" | "liked" | "superliked" | "imported", string> = {
+    all: "Toutes les offres",
+    liked: "Offres likées",
+    superliked: "Superlikes",
+    imported: "Importées",
+  };
+
   useEffect(() => {
     if (location.state?.initialView) {
       const { initialView } = location.state;
@@ -109,6 +124,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       }
     }
   }, [location.state]);
+
+  // Passage à l'onglet suivant lorsqu'on appuie sur le bouton de filtre
+  const cycleTab = () => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const nextIndex = (currentIndex + 1) % tabOrder.length;
+    setActiveTab(tabOrder[nextIndex]);
+  };
 
   // States pour "Toutes les offres"
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1039,9 +1061,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   const getJobDescriptionShort = (job: Job): string => {
     // Essayer d'extraire une description du champ raw
     if (job.raw?.description) {
-      // Limiter à 200 caractères pour l'affichage dans la carte
+      // Limiter à 140 caractères pour l'affichage dans la carte (plus compact sur mobile)
       const desc = job.raw.description;
-      return desc.length > 200 ? desc.substring(0, 200) + "..." : desc;
+      return desc.length > 140 ? desc.substring(0, 140) + "..." : desc;
     }
     return "Aucune description disponible pour cette offre.";
   };
@@ -1122,9 +1144,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         description="Découvrez des centaines d'offres d'emploi pour ingénieurs débutants et confirmés. Postulez en un clic à votre futur poste."
         canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
       />
-      {/* Bordures colorées subtiles sur les côtés */}
-      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
-      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      {/* Bordures colorées subtiles sur les côtés (désactivées sur mobile pour éviter le débordement) */}
+      <div className="hidden md:block fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="hidden md:block fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       {/* Navigation - Fixe en haut à droite */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
@@ -1155,67 +1177,47 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         <LogoHeader />
       </div>
       
-      <div className="flex-1 flex flex-col px-2 sm:px-3 py-4 relative z-10 overflow-y-auto">
-        <div className="w-full max-w-[900px] mx-auto space-y-4 pb-8">
-          {/* Header d'onglets - Style amélioré */}
-          <div className="flex gap-2 justify-center pt-2 flex-wrap">
+      <div className="flex-1 flex flex-col px-2 sm:px-3 py-3 sm:py-4 relative z-10 overflow-y-auto">
+        <div className="w-full max-w-[900px] mx-auto space-y-3 sm:space-y-4 pb-4 sm:pb-8">
+          {/* Header filtres - bouton unique qui cycle entre les vues */}
+          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1">
             <button
-              onClick={() => setActiveTab("all")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "all"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
+              onClick={cycleTab}
+              className="px-5 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
             >
-              Toutes les offres
-            </button>
-            <button
-              onClick={() => setActiveTab("liked")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "liked"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Offres likées
-            </button>
-            <button
-              onClick={() => setActiveTab("superliked")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "superliked"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Superlikes
-            </button>
-            <button
-              onClick={() => setActiveTab("imported")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "imported"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Importées
+              <Briefcase className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {tabLabels[activeTab]}
+              </span>
             </button>
             <button
               onClick={handleImportOffer}
-              className="px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:scale-105 cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
               title="Importer la dernière offre scannée par l'extension"
             >
               <Download className="w-4 h-4" />
-              Importer
+              <span className="hidden sm:inline">
+                Importer
+              </span>
             </button>
             {activeTab === "all" && (
               <button
                 onClick={() => loadUnswipedJobs(true)}
-                className="px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-105 cursor-pointer flex items-center gap-2"
+                className="px-4 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
                 title="Rafraîchir les offres et recalculer les scores"
               >
                 <RefreshCw className="w-4 h-4" />
-                Rafraîchir
+                <span className="hidden sm:inline">
+                  Rafraîchir
+                </span>
               </button>
+            )}
+
+            {/* Indicateur compact pour mobile, à côté des boutons */}
+            {activeTab === "all" && !limitReached && (
+              <span className="ml-2 text-[11px] text-slate-600 sm:hidden whitespace-nowrap">
+                {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
+              </span>
             )}
           </div>
 
@@ -1226,9 +1228,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
             </div>
           )}
 
-          {/* Indicateur de progression - Style amélioré */}
+          {/* Indicateur de progression - Style amélioré (desktop / tablette uniquement) */}
           {activeTab === "all" && !limitReached && (
-            <div className="text-center mb-3">
+            <div className="hidden sm:block text-center mb-2">
               <div className="inline-flex flex-col items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -1250,8 +1252,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
           {/* Contenu selon l'onglet actif */}
           {activeTab === "all" ? (
             // Onglet "Toutes les offres" - Style app de dating
-            <div className="flex items-start justify-center py-4 min-h-0">
-              <div className="w-full max-w-[850px] mx-auto">
+            <div className="flex items-start justify-center py-2 sm:py-4 min-h-0">
+              <div className="w-full max-w-md sm:max-w-[850px] mx-auto">
                 {jobs.length === 0 || currentIndex >= jobs.length ? (
                   <div className="text-center py-12">
                     <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">

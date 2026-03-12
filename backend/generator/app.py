@@ -24,7 +24,7 @@ origins = [
     "http://localhost:3000",      # Développement local alternatif
     "https://jobswipe-procom.github.io",  # Production (GitHub Pages)
     "http://10.144.200.85:8080",
-    "http://172.16.2.207:8080",
+    "http://172.16.1.154:8080",
 ]
 
 # Ajout d'une origine supplémentaire via variable d'environnement (ex: pour Render/Vercel previews)

@@ -1230,40 +1230,40 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
         )}
 
         {/* Barre d'onglets en bas */}
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
-          <div className="flex gap-1 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-full">
+        <div className="fixed bottom-4 left-0 right-0 z-40 px-3 sm:bottom-8">
+          <div className="max-w-md mx-auto flex gap-1 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-full overflow-x-auto">
             <Button 
               variant={activeTab === "overview" ? "default" : "ghost"}
               onClick={() => setActiveTab("overview")}
-              className="rounded-full px-6 transition-all duration-300"
+              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
             >
               Vue d'ensemble
             </Button>
             <Button 
               variant={activeTab === "offers" ? "default" : "ghost"}
               onClick={() => setActiveTab("offers")}
-              className="rounded-full px-6 transition-all duration-300"
+              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
             >
               Détails des offres
             </Button>
             <Button 
               variant={activeTab === "applications" ? "default" : "ghost"}
               onClick={() => setActiveTab("applications")}
-              className="rounded-full px-6 transition-all duration-300"
+              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
             >
               Suivi candidatures
             </Button>
             <Button 
               variant={activeTab === "analyst" ? "default" : "ghost"}
               onClick={() => setActiveTab("analyst")}
-              className="rounded-full px-6 transition-all duration-300"
+              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
             >
               IA Analyste
             </Button>
             <Button 
               variant={activeTab === "contacts" ? "default" : "ghost"}
               onClick={() => setActiveTab("contacts")}
-              className="rounded-full px-6 transition-all duration-300"
+              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
             >
               Contacts
             </Button>
