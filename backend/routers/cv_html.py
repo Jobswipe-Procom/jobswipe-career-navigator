@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse, FileResponse
 from typing import Dict, Any
-from backend.generator.functions.cv_generator import generate_cv_html, convert_html_to_pdf
+from generator.functions.cv_generator import generate_cv_html, convert_html_to_pdf
 import tempfile
 import os
 
