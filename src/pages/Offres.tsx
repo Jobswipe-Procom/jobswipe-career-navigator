@@ -1180,7 +1180,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       <div className="flex-1 flex flex-col px-2 sm:px-3 py-3 sm:py-4 relative z-10 overflow-y-auto">
         <div className="w-full max-w-[900px] mx-auto space-y-3 sm:space-y-4 pb-4 sm:pb-8">
           {/* Header filtres - bouton unique qui cycle entre les vues */}
-          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1 pl-3">
             <button
               onClick={cycleTab}
               className="px-5 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-indigo-600 text-white sm:shadow-lg sm:shadow-indigo-200 hover:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
