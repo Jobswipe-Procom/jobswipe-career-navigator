@@ -553,7 +553,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative">
+    <div className="h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Mon Profil"
         description="Gérez votre profil professionnel"
@@ -567,14 +567,14 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
           onClick={() => navigate("/application-dashboard")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Tableau de bord"
         >
           <LayoutDashboard className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => navigate("/jobswipe/offres")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Offres"
         >
           <Briefcase className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
@@ -592,7 +592,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         <LogoHeader />
       </div>
       
-      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-4xl mx-auto relative z-10">
+      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-8 max-w-4xl mx-auto relative z-10 w-full overflow-y-auto pb-24">
         {/* En-tête avec titre et bouton de sauvegarde */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">

@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MoreHorizontal, Bell, Home, User, Briefcase, Loader2, ChevronDown, ChevronUp, BrainCircuit, CalendarClock, Lightbulb, CheckCircle2, AlertCircle, MessageSquare, FileText, XCircle, RefreshCw, Clock, Calendar as CalendarIcon, ArrowRight, Mail, Trash2, Phone, Video, MapPin, Heart, Search, Copy, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { MoreHorizontal, Bell, Home, User, Briefcase, Loader2, ChevronDown, ChevronUp, BrainCircuit, CalendarClock, Lightbulb, CheckCircle2, AlertCircle, MessageSquare, FileText, XCircle, RefreshCw, Clock, Calendar as CalendarIcon, ArrowRight, Mail, Trash2, Phone, Video, MapPin, Heart, Search, Copy, X, LayoutDashboard } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/lib/supabaseClient";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -59,54 +59,96 @@ const statusLabels: Record<ApplicationStatus, string> = {
   rejected: "Refusée",
 };
 
-const statusColors: Record<ApplicationStatus, string> = {
-  imported: "bg-emerald-50 border-emerald-200",
-  liked: "bg-gray-100 border-gray-200",
-  superliked: "bg-amber-100 border-amber-200",
-  applied: "bg-blue-100 border-blue-200",
-  interview: "bg-purple-100 border-purple-200",
-  job_offer: "bg-teal-100 border-teal-200",
-  accepted: "bg-green-100 border-green-200",
-  rejected: "bg-red-100 border-red-200",
-}
-
-const columns: ApplicationStatus[] = ["imported", "liked", "superliked", "applied", "interview", "job_offer", "accepted", "rejected"];
-const offerColumns: ApplicationStatus[] = ["imported", "liked", "superliked", "applied"];
-const applicationColumns: ApplicationStatus[] = ["applied", "interview", "job_offer", "accepted", "rejected"];
-
-const KpiCard = ({ title, value, rate }: { title: string, value: string | number, rate?: string }) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+const KpiCard = ({ title, value, rate, onClick, isSelected }: { title: string, value: string | number, rate?: string, onClick?: () => void, isSelected?: boolean }) => (
+    <Card className={`p-3 transition-all ${onClick ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-indigo-500 shadow-lg' : 'hover:shadow-md'}` } onClick={onClick}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 h-9">
+            <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
+        <CardContent className="p-0">
+            <div className="text-xl font-bold">{value}</div>
             {rate && <p className="text-xs text-muted-foreground">{rate}</p>}
         </CardContent>
     </Card>
 );
 
-const EvolutionChart = ({ data, lines }: { data: any[], lines: { key: string, color: string, name: string }[] }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Évolution temporelle</CardTitle>
-    </CardHeader>
-    <CardContent className="h-[400px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <RechartsTooltip />
-          <Legend />
-          {lines.map((line) => (
-            <Line key={line.key} type="monotone" dataKey={line.key} stroke={line.color} name={line.name} strokeWidth={2} />
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-background/90 backdrop-blur-sm p-2 shadow-sm animate-in fade-in-0 zoom-in-95">
+          <p className="text-sm font-bold text-foreground mb-1">{label}</p>
+          {payload.map((p: any) => (
+            <div key={p.dataKey} className="flex items-center justify-between">
+              <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: p.color }}/>
+                  <p className="text-xs text-muted-foreground">{p.name}</p>
+              </div>
+              <p className="text-xs font-semibold text-foreground ml-4">{p.value}</p>
+            </div>
           ))}
-        </LineChart>
-      </ResponsiveContainer>
-    </CardContent>
-  </Card>
-);
+        </div>
+      );
+    }
+    return null;
+  };
+
+const EvolutionChart = ({ data, lines }: { data: any[], lines: { key: string, color: string, name: string }[] }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Évolution temporelle</CardTitle>
+      </CardHeader>
+      <CardContent className="h-[250px] sm:h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart 
+            data={data}
+            margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+          >
+            <defs>
+              {lines.map(line => (
+                <linearGradient key={line.key} id={`color-${line.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={line.color} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={line.color} stopOpacity={0}/>
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted) / 0.5)" />
+            <XAxis 
+              dataKey="date" 
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis 
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => `${value}`}
+              width={20}
+            />
+            <RechartsTooltip 
+              cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
+              content={<CustomTooltip />} 
+            />
+            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
+            {lines.map((line) => (
+              <Area 
+                  key={line.key} 
+                  type="monotone" 
+                  dataKey={line.key} 
+                  stroke={line.color} 
+                  fillOpacity={1}
+                  fill={`url(#color-${line.key})`}
+                  name={line.name} 
+                  strokeWidth={2} 
+                  activeDot={{ r: 6 }}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
 
 const MarkdownText = ({ text, className }: { text: string, className?: string }) => {
   if (!text) return null;
@@ -129,7 +171,6 @@ const ApplicationDashboard: React.FC = () => {
   const location = useLocation();
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [activeTab, setActiveTab] = useState<"overview" | "offers" | "applications" | "analyst" | "contacts">("overview");
-  const [expandedColumns, setExpandedColumns] = useState<Record<string, boolean>>({});
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showResponseModal, setShowResponseModal] = useState(false);
@@ -155,16 +196,30 @@ const ApplicationDashboard: React.FC = () => {
   const [selectedContact, setSelectedContact] = useState<{ nom: string, poste: string, email: string, is_rh: boolean, detail_bio: string, custom_mail_body: string } | null>(null);
   const [isContactSearching, setIsContactSearching] = useState(false);
   const [contactSearchError, setContactSearchError] = useState<string | null>(null);
+  const [showNavPopup, setShowNavPopup] = useState(false);
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  const [modalListData, setModalListData] = useState<{title: string, statuses: ApplicationStatus[] | null}>({ title: '', statuses: null });
+
+  const tabs = [
+    { id: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard },
+    { id: 'offers', label: "Détails des offres", icon: FileText },
+    { id: 'applications', label: "Suivi candidatures", icon: Briefcase },
+    { id: 'analyst', label: "IA Analyste", icon: BrainCircuit },
+    { id: 'contacts', label: "Contacts", icon: User },
+  ];
+  const activeTabInfo = tabs.find(t => t.id === activeTab);
 
   useEffect(() => {
     if (location.state?.initialView) {
       const { initialView } = location.state;
-      if (initialView === 'liked' || initialView === 'superliked') {
-        setActiveTab('offers');
-        setExpandedColumns(prev => ({ ...prev, [initialView]: true }));
+      const status = initialView as ApplicationStatus;
+      if (Object.keys(statusLabels).includes(status)){
+        const tab = ['imported', 'liked', 'superliked'].includes(status) ? 'offers' : 'applications';
+        setActiveTab(tab);
+        handleKpiClick(statusLabels[status], [status]);
       }
     }
-  }, [location.state]);
+  }, [location.state, applications]);
 
   // Charger les contacts sauvegardés quand l'offre sélectionnée change
   useEffect(() => {
@@ -260,6 +315,12 @@ const ApplicationDashboard: React.FC = () => {
   const handleStatusChangeClick = (applicationId: string, newStatus: ApplicationStatus | 'delete' | 'new_interview' | 'response_received') => {
     const app = applications.find(a => a.id === applicationId);
     if (!app) return;
+
+    const willOpenModal = ['delete', 'new_interview', 'response_received', 'interview', 'job_offer'].includes(newStatus) || (newStatus === 'rejected' && (app.status === 'interview' || app.status === 'job_offer'));
+
+    if (willOpenModal) {
+      setIsListModalOpen(false);
+    }
 
     if (newStatus === 'delete') {
         setItemToDelete(applicationId);
@@ -407,13 +468,6 @@ const ApplicationDashboard: React.FC = () => {
       .eq('job_id', applicationId);
   };
 
-  const toggleColumn = (status: string) => {
-    setExpandedColumns(prev => ({
-      ...prev,
-      [status]: !prev[status]
-    }));
-  };
-
   const isFollowUpSuggested = (appliedDate: Date | undefined) => {
     if (!appliedDate) return false;
     const today = new Date();
@@ -481,7 +535,7 @@ const ApplicationDashboard: React.FC = () => {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-2.5-flash";
+        const modelName = localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash";
         const model = genAI.getGenerativeModel({ model: modelName });
 
         const prompt = `
@@ -565,7 +619,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
-        model: localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-2.5-flash",
+        model: localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash",
         tools: [{ googleSearch: {} }] 
       });
 
@@ -624,19 +678,31 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
   };
 
   const kpis = {
+      imported: applications.filter(a => a.status === 'imported').length,
       liked: applications.filter(a => a.status === 'liked').length,
       superliked: applications.filter(a => a.status === 'superliked').length,
       applied: applications.filter(a => ['applied', 'interview', 'job_offer', 'accepted', 'rejected'].includes(a.status)).length,
+      applied_only: applications.filter(a => a.status === 'applied').length,
       responses: applications.filter(a => ['interview', 'job_offer', 'accepted', 'rejected'].includes(a.status)).length,
       interviews: applications.filter(a => ['interview', 'job_offer', 'accepted'].includes(a.status)).length,
+      interviews_only: applications.filter(a => a.status === 'interview').length,
       offers: applications.filter(a => ['job_offer', 'accepted'].includes(a.status)).length,
+      offers_only: applications.filter(a => a.status === 'job_offer').length,
       accepted: applications.filter(a => a.status === 'accepted').length,
+      rejected: applications.filter(a => a.status === 'rejected').length,
   };
 
   const responseRate = kpis.applied > 0 ? ((kpis.responses / kpis.applied) * 100).toFixed(0) + '%' : 'N/A';
   const interviewRate = kpis.responses > 0 ? ((kpis.interviews / kpis.responses) * 100).toFixed(0) + '%' : 'N/A';
   const offerRate = kpis.interviews > 0 ? ((kpis.offers / kpis.interviews) * 100).toFixed(0) + '%' : 'N/A';
   const acceptanceRate = kpis.offers > 0 ? ((kpis.accepted / kpis.offers) * 100).toFixed(0) + '%' : 'N/A';
+
+  const modalList = isListModalOpen ? applications.filter(app => modalListData.statuses?.includes(app.status)) : [];
+
+  const handleKpiClick = (title: string, statuses: ApplicationStatus[]) => {
+    setModalListData({ title, statuses });
+    setIsListModalOpen(true);
+  };
 
   // Préparation des données pour le graphique
   const getChartData = () => {
@@ -745,18 +811,18 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
         description="Suivez vos candidatures en temps réel"
         noindex={true}
       />
-      <div className="p-4 lg:p-8 pb-48">
+      <div className="h-screen overflow-hidden p-4 lg:p-8 pb-48">
         <div className="fixed top-4 right-4 z-50 flex gap-3">
           <button
             onClick={() => navigate("/jobswipe/offres")}
-            className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+            className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
             title="Offres"
           >
             <Briefcase className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
           </button>
           <button
             onClick={() => navigate("/profil")}
-            className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+            className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
             title="Profil"
           >
             <User className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
@@ -783,13 +849,13 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
         {activeTab === "overview" && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <KpiCard title="Offres likées" value={kpis.liked} />
-                <KpiCard title="Offres superlikées" value={kpis.superliked} />
-                <KpiCard title="Candidatures envoyées" value={kpis.applied} />
-                <KpiCard title="Réponses reçues" value={kpis.responses} rate={` de réponses`} />
-                <KpiCard title="Entretiens obtenus" value={kpis.interviews} rate={` d'entretiens`} />
-                <KpiCard title="Propositions reçues" value={kpis.offers} rate={` de conversion`} />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+                <KpiCard title="Offres likées" value={kpis.liked} onClick={() => handleKpiClick("Offres likées", ['liked'])} />
+                <KpiCard title="Offres superlikées" value={kpis.superliked} onClick={() => handleKpiClick("Offres superlikées", ['superliked'])} />
+                <KpiCard title="Candidatures envoyées" value={kpis.applied} onClick={() => handleKpiClick("Candidatures envoyées", ['applied', 'interview', 'job_offer', 'accepted', 'rejected'])} />
+                <KpiCard title="Réponses reçues" value={kpis.responses} rate={`${responseRate} de réponses`} onClick={() => handleKpiClick("Réponses reçues", ['interview', 'job_offer', 'accepted', 'rejected'])} />
+                <KpiCard title="Entretiens obtenus" value={kpis.interviews} rate={`${interviewRate} d'entretiens`} onClick={() => handleKpiClick("Entretiens obtenus", ['interview', 'job_offer', 'accepted'])} />
+                <KpiCard title="Propositions reçues" value={kpis.offers} rate={`${offerRate} de conversion`} onClick={() => handleKpiClick("Propositions reçues", ['job_offer', 'accepted'])} />
             </div>
 
             <EvolutionChart 
@@ -803,9 +869,27 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
           </div>
         )}
 
-        {(activeTab === "offers" || activeTab === "applications") && (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          {activeTab === "offers" ? (
+        {activeTab === "offers" && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <KpiCard 
+                    title="Offres Importées" 
+                    value={kpis.imported}
+                    onClick={() => handleKpiClick("Offres importées", ['imported'])} />
+                <KpiCard 
+                    title="Offres Likées" 
+                    value={kpis.liked} 
+                    onClick={() => handleKpiClick("Offres likées", ['liked'])} />
+                <KpiCard 
+                    title="Offres Superlikées" 
+                    value={kpis.superliked}
+                    onClick={() => handleKpiClick("Offres superlikées", ['superliked'])} />
+                <KpiCard 
+                    title="Offres Postulées" 
+                    value={kpis.applied_only}
+                    onClick={() => handleKpiClick("Offres postulées", ['applied'])} />
+            </div>
+
             <EvolutionChart 
               data={getChartData()} 
               lines={[
@@ -815,123 +899,29 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                 { key: "applied", color: "#3b82f6", name: "Postulée" },
               ]}
             />
-          ) : (
-            <EvolutionChart 
-              data={getChartData()} 
-              lines={[
-                { key: "applied", color: "#3b82f6", name: "Postulée" },
-                { key: "response_received", color: "#6366f1", name: "Réponse reçue" },
-                { key: "interview", color: "#a855f7", name: "Entretien" },
-                { key: "accepted", color: "#22c55e", name: "Acceptée" },
-                { key: "rejected", color: "#ef4444", name: "Refusée" },
-              ]}
-            />
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-          {(activeTab === "offers" ? offerColumns : applicationColumns).map((status) => {
-            const filteredApps = applications.filter((app) => app.status === status);
-            const isExpanded = expandedColumns[status];
-            
-            // Pour la colonne "rejected", on ne limite pas l'affichage ici car on va faire des sous-sections
-            const displayApps = (status === 'rejected' || isExpanded) ? filteredApps : filteredApps.slice(0, 2);
-
-            return (
-            <div key={status} className={`rounded-lg ${statusColors[status]} p-4 flex flex-col h-full`}>
-              <h2 className="text-lg font-semibold text-slate-700 mb-4">{statusLabels[status]}</h2>
-              <div className="space-y-4">
-                {displayApps
-                  .map((app) => (
-                    <Card key={app.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
-                      <CardHeader className="p-4 flex flex-row items-center justify-between">
-                        <CardTitle className="text-base font-semibold">{app.title}</CardTitle>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {getAvailableTransitions(app).map((transition) => (
-                              <DropdownMenuItem
-                                key={transition.status}
-                                onClick={() => handleStatusChangeClick(app.id, transition.status)}
-                              >
-                                {transition.icon && <transition.icon className="w-4 h-4 mr-2" />}
-                                {transition.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-slate-600">{app.company}</p>
-                          {app.status === 'applied' && isFollowUpSuggested(app.dates.applied) && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Bell className="h-5 w-5 text-yellow-500" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Suggestion: relancer l'entreprise.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          
-                          {app.status === 'interview' && app.interviewDate && (
-                            <div className="flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-full">
-                                <CalendarClock className="w-3 h-3" />
-                                {app.interviewDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                {app.interviewType && (
-                                  <span className="ml-1 border-l border-purple-200 pl-1">
-                                    {app.interviewType}
-                                  </span>
-                                )}
-                            </div>
-                          )}
-
-                          {app.status === 'job_offer' && app.offerDeadline && (
-                            <div className="flex items-center gap-1 text-xs text-teal-700 bg-teal-50 px-2 py-1 rounded-full">
-                                <AlertCircle className="w-3 h-3" />
-                                Deadline: {app.offerDeadline.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                            </div>
-                          )}
-
-                          {app.status === 'rejected' && app.rejectionReason && (
-                             <div className="flex items-center gap-1 text-xs text-red-700 bg-red-50 px-2 py-1 rounded-full max-w-[150px] truncate" title={app.rejectionReason}>
-                                <AlertCircle className="w-3 h-3" />
-                                {app.rejectionReason}
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {/* Bouton Voir plus sauf pour rejected qui est géré différemment */}
-                  {status !== 'rejected' && filteredApps.length > 2 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full bg-white/50 hover:bg-white/80 text-slate-600"
-                      onClick={() => toggleColumn(status)}
-                    >
-                      {isExpanded ? (
-                        <><ChevronUp className="w-4 h-4 mr-2" /> Voir moins</>
-                      ) : (
-                        <><ChevronDown className="w-4 h-4 mr-2" /> Voir plus ({filteredApps.length - 2})</>
-                      )}
-                    </Button>
-                  )}
-
-                  {filteredApps.length === 0 && (
-                      <div className="text-sm text-slate-500 text-center py-4">
-                          Aucune candidature
-                      </div>
-                  )}
-              </div>
-            </div>
-          )})}
           </div>
+        )}
+
+        {activeTab === "applications" && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <KpiCard title="Postulées" value={kpis.applied_only} onClick={() => handleKpiClick("Candidatures postulées", ['applied'])} />
+                <KpiCard title="Entretiens" value={kpis.interviews_only} onClick={() => handleKpiClick("Entretiens", ['interview'])} />
+                <KpiCard title="Propositions" value={kpis.offers_only} onClick={() => handleKpiClick("Propositions reçues", ['job_offer'])} />
+                <KpiCard title="Acceptées" value={kpis.accepted} onClick={() => handleKpiClick("Candidatures acceptées", ['accepted'])} />
+                <KpiCard title="Refusées" value={kpis.rejected} onClick={() => handleKpiClick("Candidatures refusées", ['rejected'])} />
+            </div>
+
+          <EvolutionChart 
+            data={getChartData()} 
+            lines={[
+              { key: "applied", color: "#3b82f6", name: "Postulée" },
+              { key: "interview", color: "#a855f7", name: "Entretien" },
+              { key: "job_offer", color: "#14b8a6", name: "Proposition" },
+              { key: "accepted", color: "#22c55e", name: "Acceptée" },
+              { key: "rejected", color: "#ef4444", name: "Refusée" },
+            ]}
+          />
         </div>
         )}
 
@@ -1066,7 +1056,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                         ) : (
                             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
                                 {/* Calendrier et Meilleur Créneau */}
-                                <div className="grid grid-cols-1 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="bg-gradient-to-br from-indigo-50 to-violet-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                                         <div className="flex items-start gap-3">
                                             <div className="bg-white p-2 rounded-lg shadow-sm shrink-0">
@@ -1159,7 +1149,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                    <Label>Sélectionner une offre (Likée ou Superlikée)</Label>
                    <div className="flex flex-col sm:flex-row gap-4">
                      <select 
-                       className="flex-1 p-2 border rounded-md bg-white text-sm"
+                       className="flex-1 p-3 text-base sm:p-2 sm:text-sm border rounded-md bg-white"
                        value={contactSearchJobId || ""}
                        onChange={(e) => setContactSearchJobId(e.target.value)}
                      >
@@ -1176,7 +1166,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                      <Button 
                        onClick={handleContactSearch}
                        disabled={!contactSearchJobId || isContactSearching}
-                       className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                       className="bg-indigo-600 hover:bg-indigo-700 text-white text-base sm:text-sm py-3 px-4 sm:py-2"
                      >
                        {isContactSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                        <span className="ml-2">Rechercher</span>
@@ -1229,52 +1219,127 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
           </>
         )}
 
-        {/* Barre d'onglets en bas */}
-        <div className="fixed bottom-4 left-0 right-0 z-40 px-3 sm:bottom-8">
-          <div className="max-w-md mx-auto flex gap-1 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-full overflow-x-auto">
-            <Button 
-              variant={activeTab === "overview" ? "default" : "ghost"}
-              onClick={() => setActiveTab("overview")}
-              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
-            >
-              Vue d'ensemble
-            </Button>
-            <Button 
-              variant={activeTab === "offers" ? "default" : "ghost"}
-              onClick={() => setActiveTab("offers")}
-              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
-            >
-              Détails des offres
-            </Button>
-            <Button 
-              variant={activeTab === "applications" ? "default" : "ghost"}
-              onClick={() => setActiveTab("applications")}
-              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
-            >
-              Suivi candidatures
-            </Button>
-            <Button 
-              variant={activeTab === "analyst" ? "default" : "ghost"}
-              onClick={() => setActiveTab("analyst")}
-              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
-            >
-              IA Analyste
-            </Button>
-            <Button 
-              variant={activeTab === "contacts" ? "default" : "ghost"}
-              onClick={() => setActiveTab("contacts")}
-              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap transition-all duration-300"
-            >
-              Contacts
-            </Button>
+        {/* Barre d'onglets en bas - Desktop */}
+        <div className="fixed bottom-4 left-0 right-0 z-40 px-3 sm:bottom-8 hidden sm:flex justify-center">
+            <div className="mx-auto flex gap-1 p-1.5 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-full overflow-x-auto">
+                {tabs.map(tab => (
+                    <Button 
+                        key={tab.id}
+                        variant={activeTab === tab.id ? "default" : "ghost"}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className="rounded-full px-6 text-sm whitespace-nowrap transition-all duration-300"
+                    >
+                        {tab.label}
+                    </Button>
+                ))}
+            </div>
+        </div>
+
+        {/* Mobile - Barre de navigation qui ouvre le popup */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 p-3 sm:hidden" onClick={() => setShowNavPopup(true)}>
+            <div className="flex items-center justify-between p-2 h-14 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl cursor-pointer">
+                <div className="flex items-center">
+                    {activeTabInfo && <activeTabInfo.icon className="w-5 h-5 text-indigo-600 ml-2" />}
+                    <span className="text-base font-semibold text-slate-800 ml-3">{activeTabInfo?.label}</span>
+                </div>
+                <ChevronUp className="w-5 h-5 text-slate-500 mr-2" />
+            </div>
+        </div>
+
+        {/* Mobile - Popup de navigation */}
+        {showNavPopup && (
+        <div 
+          className="fixed inset-0 z-[99] bg-black/40 backdrop-blur-sm animate-in fade-in-50 sm:hidden"
+          onClick={() => setShowNavPopup(false)}
+        >
+          <div 
+            className="fixed bottom-0 left-0 right-0 p-3 animate-in slide-in-from-bottom-10"
+            onClick={e => e.stopPropagation()}
+          >
+            <Card className="p-2">
+                <div className="flex items-center justify-between p-2 mb-2 cursor-pointer" onClick={() => setShowNavPopup(false)}>
+                    <span className="text-base font-semibold text-slate-800 ml-3">Navigation</span>
+                    <ChevronDown className="w-5 h-5 text-slate-500 mr-2" />
+                </div>
+              <div className="grid grid-cols-1 gap-1">
+                {tabs.map(tab => (
+                  <Button
+                    key={tab.id}
+                    variant={activeTab === tab.id ? "default" : "ghost"}
+                    size="lg"
+                    className="w-full justify-start text-base h-14"
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      setShowNavPopup(false);
+                    }}
+                  >
+                    <tab.icon className="w-5 h-5 mr-4" />
+                    {tab.label}
+                  </Button>
+                ))}
+              </div>
+            </Card>
           </div>
         </div>
-        <div className="h-20" />
+        )}
+
+        <div className="h-20 sm:h-0" />
       </div>
+
+      {/* Modal de la liste des offres */}
+      {isListModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
+            <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
+              <CardTitle>{modalListData.title}</CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsListModalOpen(false)}>
+                <X className="h-5 w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4 overflow-y-auto p-4">
+              {modalList.length > 0 ? (
+                modalList.map(app => (
+                  <Card key={app.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="p-4 flex flex-row items-center justify-between">
+                        <CardTitle className="text-base font-semibold">{app.title}</CardTitle>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-[150]">
+                            {getAvailableTransitions(app).map((transition) => (
+                                <DropdownMenuItem
+                                key={transition.status}
+                                onClick={() => handleStatusChangeClick(app.id, transition.status)}
+                                className="py-2 px-3 text-base"
+                                >
+                                {transition.icon && <transition.icon className="w-5 h-5 mr-3" />}
+                                {transition.label}
+                                </DropdownMenuItem>
+                            ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                        <p className="text-sm text-slate-600">{app.company}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-sm text-slate-500 text-center py-8">
+                    Aucune offre dans cette catégorie.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Modal de sélection de date */}
       {showDatePicker && pendingStatus && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[151] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1343,7 +1408,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       {/* Modal de Réponse Reçue */}
       {showResponseModal && pendingResponseApp && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[151] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1402,7 +1467,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       {/* Modal de Motif de Refus */}
       {showRejectionModal && pendingRejectionApp && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[151] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-600">
@@ -1430,7 +1495,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       {/* Modal de Contact */}
       {selectedContact && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[151] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-lg shadow-2xl relative overflow-hidden">
             <button 
               onClick={() => setSelectedContact(null)}
@@ -1440,12 +1505,12 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
             </button>
             
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl shrink-0 ${selectedContact.is_rh ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
                   {selectedContact.nom.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                 </div>
-                <div>
-                  <CardTitle className="text-xl flex items-center gap-2">
+                <div className="mt-2 sm:mt-0">
+                  <CardTitle className="text-xl flex items-center justify-center sm:justify-start gap-2">
                     {selectedContact.nom}
                     {selectedContact.is_rh && <span className="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">RH</span>}
                   </CardTitle>
@@ -1477,7 +1542,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button variant="outline" className="flex-1" onClick={() => setSelectedContact(null)}>
                   Fermer
                 </Button>
@@ -1500,7 +1565,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       {/* Modal de Confirmation de Suppression */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[151] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-600">

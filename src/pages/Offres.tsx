@@ -1138,7 +1138,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Offres d'emploi pour ingénieurs"
         description="Découvrez des centaines d'offres d'emploi pour ingénieurs débutants et confirmés. Postulez en un clic à votre futur poste."
@@ -1152,14 +1152,14 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
           onClick={() => navigate("/application-dashboard")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Tableau de bord"
         >
           <LayoutDashboard className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => navigate("/profil")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Profil"
         >
           <User className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
