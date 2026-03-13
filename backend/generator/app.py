@@ -21,23 +21,45 @@ app = FastAPI(title="JobSwipe Generator API", version="1.0")
 origins = [
     "http://localhost:5173",      # Développement local Vite
     "http://localhost:8080",      # Développement local (port actuel)
+    "http://localhost:8081",      # Dev local (port 8081)
+    "http://127.0.0.1:8081",
+    "http://localhost:8082",      # Dev local (port 8082)
+    "http://127.0.0.1:8082",
     "http://localhost:3000",      # Développement local alternatif
     "https://jobswipe-procom.github.io",  # Production (GitHub Pages)
     "http://10.144.200.85:8080",
-    "http://172.16.1.154:8080",
+    "http://172.16.2.207:8080",
+    "http://192.168.1.130:8083",   # Frontend sur réseau local (port 8083)
+    "http://192.168.1.3:8081",     # Dev réseau local (import CV)
+    "http://192.168.1.3:8082",     # Dev réseau local (import CV, port 8082)
 ]
 
 # Ajout d'une origine supplémentaire via variable d'environnement (ex: pour Render/Vercel previews)
-if os.getenv("FRONTEND_URL"):
-    origins.append(os.getenv("FRONTEND_URL"))
+_frontend_url = os.getenv("FRONTEND_URL")
+if _frontend_url:
+    origins.append(_frontend_url.strip().rstrip("/"))
 
-# Configuration CORS pour permettre les appels depuis le frontend (React)
+# Regex pour accepter tout le réseau local 192.168.1.x (n'importe quel port frontend)
+allow_origin_regex = r"http://192\.168\.1\.\d+(:\d+)?$"
+
+# Headers CORS : autoriser explicitement x-gemini-api-key (clé fournie par l'utilisateur)
+cors_allow_headers = [
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "x-gemini-api-key",
+    "x-gemini-model-name",
+]
+
+# CORS : doit être le premier middleware ajouté pour envelopper toutes les réponses (y compris prévol OPTIONS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=cors_allow_headers,
+    expose_headers=["*"],
 )
 
 # Initialisation du service
@@ -49,6 +71,7 @@ class ApplicationRequest(BaseModel):
     cv_data: Dict[str, Any]
     offer_data: Dict[str, Any]
     gender: str = "M"  # "M" pour masculin, "F" pour féminin
+    manual_content: Optional[Dict[str, Any]] = None  # si présent : pas d'appel Gemini, HTML puis PDF direct
 
 class BatchScoreRequest(BaseModel):
     cv_data: Dict[str, Any]
@@ -57,17 +80,34 @@ class BatchScoreRequest(BaseModel):
 class JobTextRequest(BaseModel):
     text: str
 
+def _require_gemini_key_if_needed(manual_content: Any, x_gemini_api_key: Optional[str]) -> str:
+    """Si Gemini est requis (pas de manual_content), vérifie que la clé est présente et non vide. Sinon 401."""
+    if manual_content is not None:
+        return (x_gemini_api_key or "").strip()
+    key = (x_gemini_api_key or "").strip()
+    if not key:
+        raise HTTPException(status_code=401, detail="Clé API manquante")
+    return key
+
+
 @app.post("/generate-cv")
 async def generate_cv(
     request: ApplicationRequest,
-    x_gemini_api_key: str = Header(..., alias="x-gemini-api-key"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
     x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
 ):
     """
     Génère uniquement le CV optimisé (PDF).
+    Si manual_content est fourni : pas d'appel Gemini, le contenu est utilisé pour générer HTML puis PDF (xhtml2pdf).
     """
+    api_key = _require_gemini_key_if_needed(request.manual_content, x_gemini_api_key)
     try:
-        results = service.process_cv(request.cv_data, request.offer_data, api_key=x_gemini_api_key, model_name=x_gemini_model_name)
+        results = service.process_cv(
+            request.cv_data, request.offer_data,
+            api_key=api_key,
+            model_name=x_gemini_model_name,
+            manual_content=request.manual_content
+        )
         
         response_data = {"files": {}}
         # Encodage du CV PDF
@@ -85,15 +125,21 @@ async def generate_cv(
 @app.post("/generate-cover-letter")
 async def generate_cover_letter(
     request: ApplicationRequest,
-    x_gemini_api_key: str = Header(..., alias="x-gemini-api-key"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
     x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
 ):
     """
     Génère uniquement la lettre de motivation (PDF).
+    Si manual_content est fourni : pas d'appel Gemini, le contenu (chunks) est utilisé pour générer HTML puis PDF (xhtml2pdf).
     """
+    api_key = _require_gemini_key_if_needed(request.manual_content, x_gemini_api_key)
     try:
         results = service.process_motivation(
-            request.cv_data, request.offer_data, gender=request.gender, api_key=x_gemini_api_key, model_name=x_gemini_model_name
+            request.cv_data, request.offer_data,
+            gender=request.gender,
+            api_key=api_key,
+            model_name=x_gemini_model_name,
+            manual_content=request.manual_content
         )
         
         response_data = {"files": {}}
@@ -114,14 +160,20 @@ async def generate_cover_letter(
 @app.post("/score-application")
 async def score_application(
     request: ApplicationRequest,
-    x_gemini_api_key: str = Header(..., alias="x-gemini-api-key"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
     x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
 ):
     """
     Calcule le score de compatibilité et fournit une analyse détaillée.
     """
+    if not x_gemini_api_key or not str(x_gemini_api_key).strip():
+        raise HTTPException(status_code=401, detail="Clé API manquante")
     try:
-        results = service.process_scoring(request.cv_data, request.offer_data, api_key=x_gemini_api_key, model_name=x_gemini_model_name)
+        results = service.process_scoring(
+            request.cv_data, request.offer_data,
+            api_key=x_gemini_api_key.strip(),
+            model_name=x_gemini_model_name
+        )
         return results
     except Exception as e:
         print(f"ERREUR 500 dans /score-application : {e}")
@@ -171,14 +223,20 @@ async def score_batch(request: BatchScoreRequest):
 @app.post("/parse-job")
 async def parse_job(
     request: JobTextRequest,
-    x_gemini_api_key: str = Header(..., alias="x-gemini-api-key"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
     x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
 ):
     """
     Parse un texte d'offre d'emploi brut en JSON structuré.
     """
+    if not x_gemini_api_key or not str(x_gemini_api_key).strip():
+        raise HTTPException(status_code=401, detail="Clé API manquante")
     try:
-        result = service.parse_only_offer(request.text, api_key=x_gemini_api_key, model_name=x_gemini_model_name)
+        result = service.parse_only_offer(
+            request.text,
+            api_key=x_gemini_api_key.strip(),
+            model_name=x_gemini_model_name
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -187,12 +245,14 @@ async def parse_job(
 async def parse_cv_upload(
     file: UploadFile = File(...),
     current_profile: Optional[str] = Form(None),
-    x_gemini_api_key: str = Header(..., alias="x-gemini-api-key"),
+    x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
     x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
 ):
     """
     Reçoit un fichier (PDF ou DOCX), extrait le texte et retourne le profil structuré JSON.
     """
+    if not x_gemini_api_key or not str(x_gemini_api_key).strip():
+        raise HTTPException(status_code=401, detail="Clé API manquante")
     try:
         content = await file.read()
         profile_data = None
@@ -202,7 +262,12 @@ async def parse_cv_upload(
             except:
                 pass # Ignore if invalid JSON
         
-        result = service.parse_cv_document(content, file.filename, api_key=x_gemini_api_key, model_name=x_gemini_model_name, current_profile=profile_data)
+        result = service.parse_cv_document(
+            content, file.filename,
+            api_key=x_gemini_api_key.strip(),
+            model_name=x_gemini_model_name,
+            current_profile=profile_data
+        )
         return result
     except Exception as e:
         print(f"ERREUR dans /parse-cv-upload : {e}")
@@ -210,4 +275,5 @@ async def parse_cv_upload(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Écouter sur 0.0.0.0 pour être joignable depuis le réseau (ex: frontend sur 192.168.1.130:8083)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8082")))
