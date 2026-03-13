@@ -42,7 +42,7 @@ export const JobSwipeScreen = ({
   return (
     <div className="flex flex-col h-full">
       {/* Carte swipeable */}
-      <div className="flex-1 flex items-center justify-center px-4 py-6 relative">
+      <div className="flex-1 flex items-center justify-center px-4 py-2 relative">
         {score !== undefined && score !== null && (
           <div 
             className="absolute top-8 left-8 z-20 px-3 py-1 rounded-full border font-bold text-sm shadow-sm flex items-center gap-1 animate-in fade-in zoom-in duration-300"
@@ -64,7 +64,7 @@ export const JobSwipeScreen = ({
       </div>
 
       {/* Boutons d'action mobile - visibles uniquement sur mobile */}
-      <div className="md:hidden pb-6 px-4">
+      <div className="hidden pb-0 px-4">
         <div className="flex gap-4 max-w-[850px] mx-auto">
           {/* Bouton "Passer" (dislike) */}
           <button

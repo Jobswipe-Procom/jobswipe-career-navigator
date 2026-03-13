@@ -12,7 +12,7 @@ import { addFavorite, removeFavorite, isFavorite } from "@/lib/storage";
 import { downloadFile } from "@/lib/utils";
 import { Job, UserProfile } from "@/types/job";
 import { Profile } from "@/types/profile";
-import { Loader2, ExternalLink, FileText, TrendingUp, Heart, Mail, Sparkles, PenTool, ArrowLeft, Home, Puzzle, Check, Save, HelpCircle } from "lucide-react";
+import { Loader2, ExternalLink, FileText, TrendingUp, Heart, Mail, Sparkles, PenTool, ArrowLeft, Home, Puzzle, Check, Save, HelpCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GeneratedDocumentView } from "@/components/GeneratedDocumentView";
 import { SEOHead } from "@/components/seo";
@@ -39,6 +39,7 @@ const OffreDetail = () => {
   const [showConfirmUnapply, setShowConfirmUnapply] = useState(false);
   const [isSuperlike, setIsSuperlike] = useState(false);
   const [isImported, setIsImported] = useState(false);
+  const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -878,7 +879,7 @@ const OffreDetail = () => {
         <LogoHeader />
       </div>
       
-      <div className="px-6 py-8 max-w-7xl mx-auto relative z-10">
+      <div className="px-6 py-8 max-w-7xl mx-auto relative z-10 pb-24 lg:pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Card className="shadow-lg border-slate-100 h-full">
@@ -1026,11 +1027,20 @@ const OffreDetail = () => {
               </div>
             )}
 
+            {job.raw?.description && (
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Description brute du poste</h3>
+                <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-line bg-slate-100/50 p-4 rounded-lg border border-slate-200/50">
+                  {job.raw.description}
+                </div>
+              </div>
+            )}
+
           </CardContent>
         </Card>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24">
               <Card className="shadow-lg border-slate-100">
                 <CardHeader>
@@ -1066,14 +1076,6 @@ const OffreDetail = () => {
                   </>
                 )}
               </Button>
-
-              <PrimaryButton
-                onClick={() => navigate(`/offres/${id}/fiche`)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Détails
-              </PrimaryButton>
 
               <PrimaryButton
                 onClick={() => navigate(`/offres/${id}/score`)}
@@ -1149,6 +1151,112 @@ const OffreDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Bouton flottant pour mobile */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent z-20 flex justify-center">
+          <PrimaryButton 
+              onClick={() => setIsActionsModalOpen(true)}
+              className="w-full max-w-xs shadow-lg"
+          >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Actions & Outils
+          </PrimaryButton>
+      </div>
+
+      {/* Modal d'actions pour mobile */}
+      {isActionsModalOpen && (
+          <div 
+              className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
+              onClick={() => setIsActionsModalOpen(false)}
+          >
+              <div 
+                  className="bg-white rounded-t-2xl p-4 space-y-3 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom-24 duration-300"
+                  onClick={(e) => e.stopPropagation()}
+              >
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-indigo-600" />
+                          Outils & Actions
+                      </h3>
+                      <button onClick={() => setIsActionsModalOpen(false)} className="p-1 rounded-full hover:bg-slate-100">
+                          <X className="w-5 h-5 text-slate-500" />
+                      </button>
+                  </div>
+                  
+                  <PrimaryButton onClick={handleApply} className="w-full">
+                    <ExternalLink className="w-5 h-5 mr-2" />
+                    Voir l'annonce
+                  </PrimaryButton>
+
+                  <Button
+                    variant="outline"
+                    onClick={toggleApplicationStatus}
+                    className={`w-full py-6 text-lg font-semibold rounded-lg shadow-sm ${
+                      applicationStatus === 'applied' 
+                        ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {applicationStatus === 'applied' ? (
+                      <>
+                        <Check className="w-5 h-5 mr-2" />
+                        Postulé
+                      </>
+                    ) : (
+                      <>
+                        <HelpCircle className="w-5 h-5 mr-2" />
+                        Postulé ?
+                      </>
+                    )}
+                  </Button>
+
+                  <PrimaryButton
+                    onClick={() => navigate(`/offres/${id}/score`)}
+                    className="bg-secondary hover:bg-secondary/90 w-full"
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Score
+                  </PrimaryButton>
+                  
+                  {generatedDocs?.cv ? (
+                    <PrimaryButton
+                      onClick={() => { setInitialTab('cv'); setShowDocuments(true); }}
+                      className="bg-green-600 hover:bg-green-700 w-full"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Voir mon CV
+                    </PrimaryButton>
+                  ) : (
+                    <PrimaryButton onClick={handleGenerateCV} disabled={generatingCV || generating} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 w-full">
+                      {generatingCV ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+                      {generatingCV ? "Génération..." : "Générer CV"}
+                    </PrimaryButton>
+                  )}
+
+                  {generatedDocs?.cl ? (
+                    <PrimaryButton onClick={() => { setInitialTab('cl'); setShowDocuments(true); }} className="bg-green-600 hover:bg-green-700 w-full">
+                      <PenTool className="w-4 h-4 mr-2" />
+                      Voir ma Lettre
+                    </PrimaryButton>
+                  ) : (
+                    <PrimaryButton onClick={handleGenerateCoverLetter} disabled={generatingCL || generating} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 w-full">
+                      {generatingCL ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PenTool className="w-4 h-4 mr-2" />}
+                      {generatingCL ? "Génération..." : "Générer Lettre"}
+                    </PrimaryButton>
+                  )}
+
+                  <PrimaryButton onClick={handleGenerateApplication} disabled={generating || generatingCV || generatingCL} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md">
+                    {generating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                    {generating ? "Génération IA en cours..." : "Générer Pack Candidature IA"}
+                  </PrimaryButton>
+
+                  <SecondaryButton onClick={handleSyncWithExtension} className="w-full border-dashed border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300">
+                    <Puzzle className="w-5 h-5 mr-2" />
+                    Envoyer vers l'extension
+                  </SecondaryButton>
+              </div>
+          </div>
+      )}
 
       {/* Modal de confirmation pour retirer le statut postulé */}
       {showConfirmUnapply && (

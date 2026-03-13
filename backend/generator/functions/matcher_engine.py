@@ -27,7 +27,7 @@ def _get_spacy_model():
     if _nlp_model is None and spacy is not None:
         try:
             # Switching to MEDIUM model for real word vectors
-            model_name = "fr_core_news_md"
+            model_name = "fr_core_news_sm"
             if not spacy.util.is_package(model_name):
                 print(f"[INFO] Model '{model_name}' not found. Downloading...")
                 spacy.cli.download(model_name)

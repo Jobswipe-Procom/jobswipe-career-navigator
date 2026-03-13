@@ -101,6 +101,21 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // State pour l'onglet actif
   const [activeTab, setActiveTab] = useState<"all" | "liked" | "superliked" | "imported">("all");
 
+  // Ordre et labels des onglets pour le bouton unique
+  const tabOrder: Array<"all" | "liked" | "superliked" | "imported"> = [
+    "all",
+    "liked",
+    "superliked",
+    "imported",
+  ];
+
+  const tabLabels: Record<"all" | "liked" | "superliked" | "imported", string> = {
+    all: "Toutes les offres",
+    liked: "Offres likées",
+    superliked: "Superlikes",
+    imported: "Importées",
+  };
+
   useEffect(() => {
     if (location.state?.initialView) {
       const { initialView } = location.state;
@@ -109,6 +124,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       }
     }
   }, [location.state]);
+
+  // Passage à l'onglet suivant lorsqu'on appuie sur le bouton de filtre
+  const cycleTab = () => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const nextIndex = (currentIndex + 1) % tabOrder.length;
+    setActiveTab(tabOrder[nextIndex]);
+  };
 
   // States pour "Toutes les offres"
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1039,9 +1061,9 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   const getJobDescriptionShort = (job: Job): string => {
     // Essayer d'extraire une description du champ raw
     if (job.raw?.description) {
-      // Limiter à 200 caractères pour l'affichage dans la carte
+      // Limiter à 140 caractères pour l'affichage dans la carte (plus compact sur mobile)
       const desc = job.raw.description;
-      return desc.length > 200 ? desc.substring(0, 200) + "..." : desc;
+      return desc.length > 140 ? desc.substring(0, 140) + "..." : desc;
     }
     return "Aucune description disponible pour cette offre.";
   };
@@ -1116,28 +1138,28 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 relative">
+    <div className="h-screen flex flex-col bg-slate-50 relative overflow-hidden">
       <SEOHead
         title="Offres d'emploi pour ingénieurs"
         description="Découvrez des centaines d'offres d'emploi pour ingénieurs débutants et confirmés. Postulez en un clic à votre futur poste."
         canonical={`${window.location.origin}${window.location.pathname}${window.location.hash}`}
       />
-      {/* Bordures colorées subtiles sur les côtés */}
-      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
-      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      {/* Bordures colorées subtiles sur les côtés (désactivées sur mobile pour éviter le débordement) */}
+      <div className="hidden md:block fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="hidden md:block fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       {/* Navigation - Fixe en haut à droite */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
           onClick={() => navigate("/application-dashboard")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Tableau de bord"
         >
           <LayoutDashboard className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => navigate("/profil")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Profil"
         >
           <User className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
@@ -1155,67 +1177,76 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         <LogoHeader />
       </div>
       
-      <div className="flex-1 flex flex-col px-2 sm:px-3 py-4 relative z-10 overflow-y-auto">
-        <div className="w-full max-w-[900px] mx-auto space-y-4 pb-8">
-          {/* Header d'onglets - Style amélioré */}
-          <div className="flex gap-2 justify-center pt-2 flex-wrap">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "all"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Toutes les offres
-            </button>
-            <button
-              onClick={() => setActiveTab("liked")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "liked"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Offres likées
-            </button>
-            <button
-              onClick={() => setActiveTab("superliked")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "superliked"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Superlikes
-            </button>
-            <button
-              onClick={() => setActiveTab("imported")}
-              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out ${
-                activeTab === "imported"
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105 cursor-default"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:scale-105 cursor-pointer"
-              }`}
-            >
-              Importées
-            </button>
+      <div className="flex-1 flex flex-col px-2 sm:px-3 py-3 sm:py-4 relative z-10 overflow-y-auto">
+        <div className="w-full max-w-[900px] mx-auto flex-1 flex flex-col">
+          {/* Header filtres */}
+          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1 pl-3">
+            {/* Boutons pour vue PC/Tablette */}
+            <div className="hidden md:flex items-center gap-2">
+              {tabOrder.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out flex items-center gap-2 whitespace-nowrap ${
+                    activeTab === tab
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  } hover:scale-110 active:scale-105 cursor-pointer`}
+                >
+                  {tab === 'all' && <Briefcase className="w-4 h-4" />}
+                  {tab === 'liked' && <Heart className="w-4 h-4" />}
+                  {tab === 'superliked' && <Star className="w-4 h-4" />}
+                  {tab === 'imported' && <Download className="w-4 h-4" />}
+                  <span>{tabLabels[tab]}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Bouton pour vue Mobile */}
+            <div className="md:hidden">
+              <button
+                onClick={cycleTab}
+                className="px-4 py-2.5 rounded-full font-semibold text-xs transition-all duration-200 ease-out bg-indigo-600 text-white hover:scale-110 active:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
+              >
+                {activeTab === 'all' && <Briefcase className="w-4 h-4" />}
+                {activeTab === 'liked' && <Heart className="w-4 h-4" />}
+                {activeTab === 'superliked' && <Star className="w-4 h-4" />}
+                {activeTab === 'imported' && <Download className="w-4 h-4" />}
+                <span className="hidden sm:inline">
+                  {tabLabels[activeTab]}
+                </span>
+              </button>
+            </div>
+            
+            {/* Boutons communs (Importer, Rafraîchir) */}
             <button
               onClick={handleImportOffer}
-              className="px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:scale-105 cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:scale-110 active:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
               title="Importer la dernière offre scannée par l'extension"
             >
               <Download className="w-4 h-4" />
-              Importer
+              <span className="hidden sm:inline">
+                Importer
+              </span>
             </button>
             {activeTab === "all" && (
               <button
                 onClick={() => loadUnswipedJobs(true)}
-                className="px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-105 cursor-pointer flex items-center gap-2"
+                className="px-4 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-110 active:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
                 title="Rafraîchir les offres et recalculer les scores"
               >
                 <RefreshCw className="w-4 h-4" />
-                Rafraîchir
+                <span className="hidden sm:inline">
+                  Rafraîchir
+                </span>
               </button>
+            )}
+
+            {/* Indicateur compact pour mobile */}
+            {activeTab === "all" && !limitReached && (
+              <span className="ml-2 text-[11px] text-slate-600 sm:hidden whitespace-nowrap">
+                {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
+              </span>
             )}
           </div>
 
@@ -1226,23 +1257,31 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
             </div>
           )}
 
-          {/* Indicateur de progression - Style amélioré */}
+          {/* Indicateurs de progression (desktop / tablette uniquement) */}
           {activeTab === "all" && !limitReached && (
-            <div className="text-center mb-3">
-              <div className="inline-flex flex-col items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-slate-700 text-sm font-semibold">
-                    {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
-                  </span>
+            <div className="hidden sm:block text-center mb-1">
+              <div className="inline-flex items-center divide-x divide-gray-200 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
+                {/* Swipes restants */}
+                <div className="flex flex-col items-center gap-2 pr-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-slate-700 text-sm font-semibold">
+                      {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
+                    </span>
+                  </div>
+                  <div className="w-full max-w-[200px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${(likesToday / DAILY_LIKE_LIMIT) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                {/* Barre de progression */}
-                <div className="w-full max-w-[200px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${(likesToday / DAILY_LIKE_LIMIT) * 100}%` }}
-                  />
-                </div>
+                {/* Offres restantes */}
+                {jobs.length > 0 && currentIndex < jobs.length - 1 && (
+                  <p className="pl-4 text-center text-sm text-slate-700 font-semibold">
+                    {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1250,8 +1289,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
           {/* Contenu selon l'onglet actif */}
           {activeTab === "all" ? (
             // Onglet "Toutes les offres" - Style app de dating
-            <div className="flex items-start justify-center py-4 min-h-0">
-              <div className="w-full max-w-[850px] mx-auto">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+              <div className="w-full max-w-md sm:max-w-[850px] mx-auto h-full">
                 {jobs.length === 0 || currentIndex >= jobs.length ? (
                   <div className="text-center py-12">
                     <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
@@ -1292,7 +1331,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                           
                           <button
                             onClick={loadMoreJobs}
-                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer transition-all duration-200 ease-out"
+                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out"
                           >
                             Recharger les offres
                           </button>
@@ -1301,7 +1340,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6 py-4">
+                  <div className="h-full flex flex-col justify-center">
                     {/* Carte swipeable - Style Tinder */}
                     {(() => {
                       const currentOffer = jobs[currentIndex];
@@ -1346,7 +1385,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                           const currentOffer = jobs[currentIndex];
                           if (!currentOffer) return null;
                           return (
-                            <div className="hidden md:flex justify-center items-center gap-3 pt-4 pb-2">
+                            <div className="flex justify-center items-center gap-3 pt-4">
                               {/* Bouton Rewind (retour en arrière) */}
                               <button
                                 onClick={handleRewind}
@@ -1410,12 +1449,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 </div>
                               )}
 
-                              {/* Compteur d'offres restantes */}
-                              {currentIndex < jobs.length - 1 && (
-                                <p className="text-center text-sm text-slate-400 pt-1">
-                                  {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
-                                </p>
-                              )}
                             </>
                           );
                         })()}
@@ -1440,7 +1473,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                       </p>
                       <button
                         onClick={() => setActiveTab("all")}
-                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-out"
+                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 transition-all duration-200 ease-out"
                       >
                         Voir toutes les offres
                       </button>
@@ -1522,20 +1555,20 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                         <div className="pt-2 flex flex-col sm:flex-row gap-3">
                           <button
                             onClick={() => navigate(`/offres/${job.id}`)}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             🔍 Détails
                           </button>
                           <button
                             onClick={() => window.open(job.redirect_url, "_blank")}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche
                           </button>
                           <button
                             onClick={() => handleRemoveSwipe(job.id)}
-                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
+                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
                             title="Retirer des favoris"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -1561,7 +1594,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                       </p>
                       <button
                         onClick={() => setActiveTab("all")}
-                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-out"
+                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 transition-all duration-200 ease-out"
                       >
                         Voir toutes les offres
                       </button>
@@ -1647,20 +1680,20 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                         <div className="pt-2 flex flex-col sm:flex-row gap-3">
                           <button
                             onClick={() => navigate(`/offres/${job.id}`)}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             🔍 Détails
                           </button>
                           <button
                             onClick={() => window.open(job.redirect_url, "_blank")}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche de poste
                           </button>
                           <button
                             onClick={() => handleRemoveSwipe(job.id)}
-                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
+                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
                             title="Retirer des superlikes"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -1686,7 +1719,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                       </p>
                       <button
                         onClick={handleImportOffer}
-                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-out flex items-center justify-center gap-2 mx-auto"
+                        className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 transition-all duration-200 ease-out flex items-center justify-center gap-2 mx-auto"
                       >
                         <Download className="w-4 h-4" />
                         Importer une offre
@@ -1773,20 +1806,20 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                         <div className="pt-2 flex flex-col sm:flex-row gap-3">
                           <button
                             onClick={() => navigate(`/offres/${job.id}`)}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-white text-slate-800 border border-slate-200 font-medium shadow-sm hover:bg-slate-50 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             🔍 Détails
                           </button>
                           <button
                             onClick={() => window.open(job.redirect_url, "_blank")}
-                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center gap-2"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Voir la fiche
                           </button>
                           <button
                             onClick={() => handleRemoveSwipe(job.id)}
-                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
+                            className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-medium shadow-sm hover:bg-red-100 hover:scale-110 active:scale-105 cursor-pointer transition-all duration-200 ease-out flex items-center justify-center"
                             title="Retirer des offres importées"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -1827,13 +1860,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition-all duration-200"
+                className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 hover:scale-110 active:scale-105 transition-all duration-200"
               >
                 Annuler
               </button>
               <button
                 onClick={executeRemoveSwipe}
-                className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg shadow-red-200 transition-all duration-200 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg shadow-red-200 hover:scale-110 active:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
                 Retirer
