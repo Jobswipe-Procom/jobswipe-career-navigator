@@ -17,6 +17,8 @@ import { MoreHorizontal, Bell, Home, User, Briefcase, Loader2, ChevronDown, Chev
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/lib/supabaseClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 
@@ -199,6 +201,7 @@ const ApplicationDashboard: React.FC = () => {
   const [showNavPopup, setShowNavPopup] = useState(false);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [modalListData, setModalListData] = useState<{title: string, statuses: ApplicationStatus[] | null}>({ title: '', statuses: null });
+
 
   const tabs = [
     { id: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard },
@@ -927,8 +930,12 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
         {activeTab === "analyst" && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* F6: Feedback Analysis */}
+            <Tabs defaultValue="analyse" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="analyse">Analyse & Feedback</TabsTrigger>
+                <TabsTrigger value="timing">Assistant Timing</TabsTrigger>
+              </TabsList>
+              <TabsContent value="analyse">
                 <Card className="h-full">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1020,8 +1027,8 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* F7: Timing Assistant */}
+              </TabsContent>
+              <TabsContent value="timing">
                 <Card className="h-full">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1131,7 +1138,8 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
                         )}
                     </CardContent>
                 </Card>
-            </div>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
