@@ -64,7 +64,7 @@ export const JobSwipeScreen = ({
       </div>
 
       {/* Boutons d'action mobile - visibles uniquement sur mobile */}
-      <div className="md:hidden pb-0 px-4">
+      <div className="hidden pb-0 px-4">
         <div className="flex gap-4 max-w-[850px] mx-auto">
           {/* Bouton "Passer" (dislike) */}
           <button

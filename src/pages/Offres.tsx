@@ -1178,7 +1178,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       </div>
       
       <div className="flex-1 flex flex-col px-2 sm:px-3 py-3 sm:py-4 relative z-10 overflow-y-auto">
-        <div className="w-full max-w-[900px] mx-auto space-y-3 sm:space-y-4 pb-4 sm:pb-8">
+        <div className="w-full max-w-[900px] mx-auto flex-1 flex flex-col">
           {/* Header filtres */}
           <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1 pl-3">
             {/* Boutons pour vue PC/Tablette */}
@@ -1257,23 +1257,31 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
             </div>
           )}
 
-          {/* Indicateur de progression - Style amélioré (desktop / tablette uniquement) */}
+          {/* Indicateurs de progression (desktop / tablette uniquement) */}
           {activeTab === "all" && !limitReached && (
-            <div className="hidden sm:block text-center mb-2">
-              <div className="inline-flex flex-col items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-slate-700 text-sm font-semibold">
-                    {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
-                  </span>
+            <div className="hidden sm:block text-center mb-1">
+              <div className="inline-flex items-center divide-x divide-gray-200 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-md">
+                {/* Swipes restants */}
+                <div className="flex flex-col items-center gap-2 pr-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-slate-700 text-sm font-semibold">
+                      {likesToday} / {DAILY_LIKE_LIMIT} swipes aujourd'hui
+                    </span>
+                  </div>
+                  <div className="w-full max-w-[200px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${(likesToday / DAILY_LIKE_LIMIT) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                {/* Barre de progression */}
-                <div className="w-full max-w-[200px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${(likesToday / DAILY_LIKE_LIMIT) * 100}%` }}
-                  />
-                </div>
+                {/* Offres restantes */}
+                {jobs.length > 0 && currentIndex < jobs.length - 1 && (
+                  <p className="pl-4 text-center text-sm text-slate-700 font-semibold">
+                    {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1281,8 +1289,8 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
           {/* Contenu selon l'onglet actif */}
           {activeTab === "all" ? (
             // Onglet "Toutes les offres" - Style app de dating
-            <div className="flex items-start justify-center pt-0 pb-2 sm:py-4 min-h-0">
-              <div className="w-full max-w-md sm:max-w-[850px] mx-auto">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+              <div className="w-full max-w-md sm:max-w-[850px] mx-auto h-full">
                 {jobs.length === 0 || currentIndex >= jobs.length ? (
                   <div className="text-center py-12">
                     <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-6">
@@ -1332,7 +1340,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 sm:space-y-6 py-0 sm:py-4">
+                  <div className="h-full flex flex-col justify-center">
                     {/* Carte swipeable - Style Tinder */}
                     {(() => {
                       const currentOffer = jobs[currentIndex];
@@ -1377,7 +1385,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                           const currentOffer = jobs[currentIndex];
                           if (!currentOffer) return null;
                           return (
-                            <div className="hidden md:flex justify-center items-center gap-3 pt-4 pb-2">
+                            <div className="flex justify-center items-center gap-3 pt-4">
                               {/* Bouton Rewind (retour en arrière) */}
                               <button
                                 onClick={handleRewind}
@@ -1441,12 +1449,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                                 </div>
                               )}
 
-                              {/* Compteur d'offres restantes */}
-                              {currentIndex < jobs.length - 1 && (
-                                <p className="text-center text-sm text-slate-400 mt-0">
-                                  {jobs.length - currentIndex - 1} offre{jobs.length - currentIndex - 1 > 1 ? "s" : ""} restante{jobs.length - currentIndex - 1 > 1 ? "s" : ""}
-                                </p>
-                              )}
                             </>
                           );
                         })()}

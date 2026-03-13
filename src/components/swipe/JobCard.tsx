@@ -185,7 +185,7 @@ export const JobCard = React.memo(({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          initial={{ opacity: 0, y: 30, scale: 0.75 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{
             opacity: 0,
@@ -207,15 +207,12 @@ export const JobCard = React.memo(({
             x,
             rotate,
             cursor: disabled ? "not-allowed" : "grab",
-            height: "auto",
-            maxHeight: "600px",
-            minHeight: "520px",
             touchAction: "pan-y", // Permet le scroll vertical mais bloque le scroll horizontal
             willChange: "transform", // Optimisation pour la fluidité mobile
           }}
           whileDrag={{ cursor: "grabbing", scale: 1.02 }}
-          whileHover={{ scale: 1.01 }}
-          className="bg-white rounded-3xl overflow-hidden shadow-2xl relative w-full"
+          whileHover={{ scale: 1.02 }}
+          className="bg-white rounded-3xl overflow-hidden shadow-2xl relative w-full h-auto max-h-[600px] min-h-[520px] md:min-h-[460px]"
         >
           {/* Like Overlay (droite) */}
           <motion.div
@@ -250,7 +247,7 @@ export const JobCard = React.memo(({
           </motion.div>
 
           {/* Zone Hero Image (plus compacte sur mobile) */}
-          <div className="relative h-[50%] sm:h-[60%] min-h-[160px] sm:min-h-[300px] max-h-[200px] sm:max-h-[360px] overflow-hidden">
+          <div className="relative h-[50%] md:h-[30%] min-h-[160px] md:min-h-[160px] max-h-[200px] md:max-h-[180px] overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.1),transparent_50%)]" />
@@ -273,7 +270,7 @@ export const JobCard = React.memo(({
           </div>
 
           {/* Zone Infos (40% de la hauteur) */}
-          <div className="relative h-[40%] bg-white p-6 flex flex-col justify-between">
+          <div className="relative h-[50%] md:h-[70%] bg-white p-6 flex flex-col justify-between">
             <div className="flex-1">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h2 className="text-3xl font-bold text-graphite leading-tight flex-1">
@@ -333,5 +330,6 @@ export const JobCard = React.memo(({
     </div>
   );
 });
+
 
 JobCard.displayName = "JobCard";
