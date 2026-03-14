@@ -30,7 +30,11 @@ load_dotenv()
 # 1. CONFIG GEMINI
 # ============================================================================
 
+# Récupération de la clé API depuis les variables d'environnement
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Récupération du nom du modèle (avec une valeur par défaut si non définie)
+GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"  # ou "gemini-1.5-flash" selon votre accès
 
 # ============================================================================
 # 2. OUTIL : extraction du JSON renvoyé par le modèle
@@ -98,123 +102,111 @@ def build_cv_parsing_prompt(cv_text: str, current_profile: Optional[Dict[str, An
     if current_profile:
         profile_str = json.dumps(current_profile, ensure_ascii=False, indent=2)
         context_instruction = f"""
-CONTEXT - EXISTING USER PROFILE:
-The user already has a profile with the following data:
+CONTEXTE - PROFIL UTILISATEUR EXISTANT :
+L'utilisateur a déjà un profil avec les données suivantes :
 {profile_str}
 
-TASK UPDATE:
-- You must MERGE the information from the CV text below into this existing profile.
-- KEEP existing information if it is not mentioned in the CV (do not delete existing experiences or skills).
-- UPDATE fields if the CV provides newer or more detailed information.
-- AVOID duplicates in lists (e.g. skills).
+MIVE À JOUR :
+- Fusionnez les informations du texte du CV ci-dessous dans ce profil existant.
+- GARDEZ les informations existantes si elles ne sont pas mentionnées dans le CV.
+- METTEZ À JOUR les champs si le CV fournit des informations plus récentes.
+- ÉVITEZ les doublons dans les listes.
 """
 
     return f"""
-You are an AI expert specialized in parsing CVs and resumes.
+Vous êtes un expert en IA spécialisé dans l'analyse de CV (parsing).
+Votre tâche : Analyser le texte du CV ci-dessous et extraire les informations structurées.
 
-Your task:
-Analyze the CV text below and extract structured information about the candidate.
 {context_instruction}
-You MUST return STRICTLY a valid JSON object, with NO explanation, NO text
-before, and NO text after.
 
-⚠️ VERY IMPORTANT — The JSON MUST contain ALL of the following fields,
-with EXACTLY these names:
+Vous DEVEZ retourner STRICTEMENT un objet JSON valide, sans explication, sans texte avant ou après.
+
+⚠️ TRÈS IMPORTANT — Le JSON DOIT contenir TOUS les champs suivants :
 
 {{
-  "first_name": string | null,          // Candidate first name
-  "last_name": string | null,           // Candidate last name
-  "full_name": string | null,           // Full name as it appears on the CV
-  "target_role": string | null,         // Inferred target job title based on CV content
-  "experience_level": string | null,    // e.g. "Junior", "Senior", "Expert", "Student"
+  "first_name": string | null,
+  "last_name": string | null,
+  "full_name": string | null,
+  "gender": string | null,              // "Homme", "Femme", ou "Non-binaire"
+  "target_role": string | null,
+  "experience_level": string | null,
+  "availability_date": string | null,   // Date de disponibilité au format YYYY-MM-DD
+  "salary_expectation": string | null,  // Prétention salariale (ex: "45k", "500€/jour")
+  "is_disabled": boolean | null,        // true si mention de situation de handicap, sinon false ou null
 
   "contacts": {{
-    "emails": string[],                 // all email addresses found
-    "phones": string[],                 // all phone numbers found
-    "locations": string[]               // cities / countries / locations
+    "emails": string[],
+    "phones": string[],
+    "locations": string[]
   }},
 
-  "websites": [                         // personal sites, portfolios, blogs
-    {{
-      "label": string | null,           // e.g., "Portfolio", "Personal website"
-      "url": string
-    }}
+  "websites": [
+    {{ "label": string | null, "url": string }}
   ],
 
-  "social_links": [                     // LinkedIn, GitHub, etc.
-    {{
-      "platform": string | null,        // e.g., "LinkedIn", "GitHub"
-      "url": string
-    }}
+  "social_links": [
+    {{ "platform": string | null, "url": string }}
   ],
 
   "skills": {{
-    "hard_skills": string[],            // technical / domain skills
-    "soft_skills": string[],            // interpersonal / behavioral
-    "languages": [                      // spoken languages
-      {{
-        "name": string,                 // e.g. "French"
-        "level": string | null          // e.g. "Native", "C1", "Fluent"
-      }}
+    "hard_skills": string[],
+    "soft_skills": string[],
+    "languages": [
+      {{ "name": string, "level": string | null }}
     ]
   }},
 
-  "professional_experiences": [         // jobs, internships, freelance
-    {{
-      "title": string | null,           // job title
-      "company": string | null,         // employer
-      "location": string | null,        // city / country if available
-      "start_date": string | null,      // as written in the CV (e.g., "Feb 2024", "2022")
-      "end_date": string | null,        // "Present" or similar if ongoing
-      "description": string             // short paragraph or bullet list joined
-    }}
-  ],
-
-  "academic_projects": [                // student projects, hackathons, etc.
+  "professional_experiences": [
     {{
       "title": string | null,
-      "context": string | null,         // e.g., course, hackathon, team project
-      "technologies": string[],         // stack: e.g., ["Python", "D3.js"]
+      "company": string | null,
+      "location": string | null,
+      "start_date": string | null,      // Format YYYY-MM-DD (ex: 2024-02-01)
+      "end_date": string | null,        // Format YYYY-MM-DD ou "Présent"
       "description": string
     }}
   ],
 
-  "education": [                        // degrees, schools, universities
+  "academic_projects": [
     {{
-      "degree": string | null,          // e.g., "Diplôme d'ingénieur en Data Science"
-      "school": string | null,          // e.g., "IMT Atlantique"
-      "location": string | null,        // city / country if available
-      "start_date": string | null,      // as written in the CV
-      "end_date": string | null,        // as written in the CV
-      "description": string             // e.g., main courses, specializations
+      "title": string | null,
+      "context": string | null,
+      "technologies": string[],
+      "description": string
     }}
   ],
 
-  "certifications": [                   // certifications, MOOCs, badges
+  "education": [
     {{
-      "name": string | null,            // e.g., "AWS Certified Cloud Practitioner"
-      "issuer": string | null,          // e.g., "Amazon", "Coursera"
-      "date": string | null             // as written in the CV
+      "degree": string | null,
+      "school": string | null,
+      "location": string | null,
+      "start_date": string | null,      // Format YYYY-MM-DD
+      "end_date": string | null,        // Format YYYY-MM-DD
+      "description": string
     }}
   ],
 
-  "interests": [                        // hobbies, extracurriculars
-    string
+  "certifications": [
+    {{
+      "name": string | null,
+      "issuer": string | null,
+      "date": string | null             // Format YYYY-MM-DD
+    }}
   ],
 
-  "raw_summary": string | null          // short global summary of the candidate (2–3 sentences)
+  "interests": [string],
+  "raw_summary": string | null
 }}
 
-Rules you MUST follow:
-- All string values in the JSON output MUST be in French. This includes descriptions, titles, summaries, etc.
-- Return ONLY the JSON object — no markdown, no backticks, no comments.
-- If a field is unknown, set it to null (for scalars) or [] (for lists).
-- Always include all top-level keys (even if empty).
-- Do NOT invent projects or companies that are not clearly in the CV.
-- You may slightly rephrase descriptions to make them concise and clear.
-- Dates must remain as written in the CV (no need to normalize format).
+RÈGLES STRICTES :
+1. Toutes les valeurs textuelles (descriptions, titres) DOIVENT être en Français.
+2. Les dates DOIVENT être converties au format ISO "YYYY-MM-DD". Si seul le mois/année est présent (ex: "Fev 2024"), utilisez le premier jour du mois (2024-02-01).
+3. Si un champ est inconnu, mettez null (pour les objets) ou [] (pour les listes).
+4. Ne pas inventer d'informations.
+5. Retournez UNIQUEMENT le JSON.
 
-Here is the CV text to parse:
+Texte du CV à analyser :
 \"\"\" 
 {cv_text}
 \"\"\"
@@ -347,5 +339,5 @@ if __name__ == "__main__":
     """
 
     print("[INFO] Parsing CV with Gemini...")
-    result = parse_cv_with_gemini(demo_cv)
+    result = parse_cv_with_gemini(demo_cv, api_key=GEMINI_API_KEY, model_name=GEMINI_MODEL_NAME)
     print(json.dumps(result, indent=2, ensure_ascii=False))
