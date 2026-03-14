@@ -398,7 +398,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
     try {
       setImporting(true);
-      toast({ description: "Analyse du CV en cours..." });
+      toast({ description: "Analyse du CV par l'IA en cours..." });
 
       const formData = new FormData();
       formData.append("file", file);
@@ -409,16 +409,24 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
       const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
+      
       if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil pour utiliser l'analyse IA." });
+          toast({ 
+            variant: "destructive", 
+            description: "Clé API Gemini manquante. Veuillez la configurer en bas de page." 
+          });
           if (fileInputRef.current) fileInputRef.current.value = "";
           setImporting(false);
           return;
       }
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
-      const headers: HeadersInit = {};
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+
+      // On récupère le modèle, sinon on force une version 1.5 valide
+      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash";
+      
+      const headers: HeadersInit = {
+        'x-gemini-api-key': geminiKey,
+        'x-gemini-model-name': geminiModel
+      };
 
       const response = await fetch(`${API_URL}/parse-cv-upload`, {
         method: "POST",
@@ -432,7 +440,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
       const data = await response.json();
       
-      // Mapping des données reçues vers le format Profile
+      // Mapping des données reçues vers le format Profile (Inclus les nouveaux champs)
       const updatedProfile: Partial<Profile> = {
         first_name: data.first_name || profile?.first_name,
         last_name: data.last_name || profile?.last_name,
@@ -441,10 +449,18 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         city: data.contacts?.locations?.[0] || profile?.city,
         target_role: data.target_role || profile?.target_role,
         experience_level: data.experience_level || profile?.experience_level,
-        // Mapping des compétences
+        
+        // --- NOUVEAUX CHAMPS MAPPÉS ---
+        // Conversion du genre : "Homme" -> "M", "Femme" -> "F"
+        gender: data.gender === "Femme" ? "F" : data.gender === "Homme" ? "M" : data.gender === "Non-binaire" ? "NB" : null,
+        // Conversion boolean -> string pour votre select handicap
+        handicap: data.is_disabled ? "Oui" : "Non",
+        salary_expectations: data.salary_expectation || (profile as any)?.salary_expectations,
+        availability: data.availability_date || profile?.availability,
+        // ------------------------------
+
         hardSkills: data.skills?.hard_skills || [],
         softSkills: data.skills?.soft_skills || [],
-        // Mapping des langues (string -> object)
         languages: (data.skills?.languages || []).map((lang: any) => {
           if (typeof lang === 'string') return { name: lang, level: "" };
           return {
@@ -452,7 +468,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
             level: lang.level || ""
           };
         }),
-        // Mapping des expériences
         experiences: (data.professional_experiences || []).map((exp: any) => ({
           role: exp.title || "",
           company: exp.company || "",
@@ -461,7 +476,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
           endDate: formatDateForInput(exp.end_date),
           description: exp.description || ""
         })),
-        // Mapping de la formation
         education: (data.education || []).map((edu: any) => ({
           degree: edu.degree || "",
           school: edu.school || "",
@@ -470,9 +484,7 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
           endDate: formatDateForInput(edu.end_date),
           details: edu.description || ""
         })),
-        // Mapping des intérêts
         interests: data.interests || [],
-        // Mapping des projets
         projects: (data.academic_projects || []).map((proj: any) => ({
           name: proj.title || "",
           role: proj.context || "",
@@ -553,28 +565,28 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 relative">
       <SEOHead
         title="Mon Profil"
         description="Gérez votre profil professionnel"
         noindex={true}
       />
-      {/* Bordures colorées subtiles sur les côtés (désactivées sur mobile pour éviter le débordement) */}
-      <div className="hidden md:block fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
-      <div className="hidden md:block fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      {/* Bordures colorées subtiles sur les côtés */}
+      <div className="fixed left-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-violet-200 via-purple-200 to-indigo-200 opacity-50 blur-3xl z-0 pointer-events-none" />
+      <div className="fixed right-0 top-0 bottom-0 w-[5cm] bg-gradient-to-b from-blue-200 via-indigo-200 to-violet-200 opacity-50 blur-3xl z-0 pointer-events-none" />
       
       {/* Navigation - Fixe en haut à droite */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
           onClick={() => navigate("/application-dashboard")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Tableau de bord"
         >
           <LayoutDashboard className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => navigate("/jobswipe/offres")}
-          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg hidden sm:flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-lg border border-white/50 shadow-lg flex items-center justify-center transition-all duration-200 ease-out hover:bg-white/95 hover:shadow-xl hover:scale-110 active:scale-95 cursor-pointer"
           title="Offres"
         >
           <Briefcase className="w-5 h-5 text-indigo-600" strokeWidth={2.5} />
@@ -592,9 +604,9 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         <LogoHeader />
       </div>
       
-      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-8 max-w-4xl mx-auto relative z-10 w-full overflow-y-auto pb-24">
+      <div className="px-6 py-8 max-w-4xl mx-auto relative z-10">
         {/* En-tête avec titre et bouton de sauvegarde */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
               <User className="w-6 h-6 text-indigo-600" />
@@ -607,8 +619,8 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
             </div>
           </div>
 
-          {/* Boutons Import CV & Sauvegarde */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {/* Bouton Import CV */}
+          <div className="flex gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -619,17 +631,17 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing || saving}
-              className="w-full sm:w-auto px-4 py-3 rounded-2xl font-medium bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="px-4 py-3 rounded-2xl font-medium bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
             >
               {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-              <span className="text-sm sm:text-base">Importer mon CV</span>
+              <span className="hidden sm:inline">Importer mon CV</span>
             </button>
 
           {/* Bouton de sauvegarde avec feedback */}
           <button
             onClick={saveProfile}
             disabled={saving}
-            className={`w-full sm:w-auto px-6 py-3 rounded-2xl font-medium shadow-sm transition-all duration-200 ease-out flex items-center justify-center gap-2 ${
+            className={`px-6 py-3 rounded-2xl font-medium shadow-sm transition-all duration-200 ease-out flex items-center gap-2 ${
               saveStatus === "success"
                 ? "bg-green-500 text-white"
                 : saveStatus === "error"
