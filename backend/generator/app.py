@@ -54,7 +54,7 @@ cors_allow_headers = [
 # CORS : doit être le premier middleware ajouté pour envelopper toutes les réponses (y compris prévol OPTIONS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Permettre toutes les origines (le regex gère les 192.168.1.x)
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -71,6 +71,7 @@ class ApplicationRequest(BaseModel):
     cv_data: Dict[str, Any]
     offer_data: Dict[str, Any]
     gender: str = "M"  # "M" pour masculin, "F" pour féminin
+    style: str = "finance" # finance, modern
     manual_content: Optional[Dict[str, Any]] = None  # si présent : pas d'appel Gemini, HTML puis PDF direct
 
 class BatchScoreRequest(BaseModel):
@@ -106,7 +107,8 @@ async def generate_cv(
             request.cv_data, request.offer_data,
             api_key=api_key,
             model_name=x_gemini_model_name,
-            manual_content=request.manual_content
+            manual_content=request.manual_content,
+            style=request.style
         )
         
         response_data = {"files": {}}
@@ -114,6 +116,9 @@ async def generate_cv(
         if "cv_pdf" in results.get("paths", {}):
             with open(results["paths"]["cv_pdf"], "rb") as f:
                 response_data["files"]["cv_pdf"] = base64.b64encode(f.read()).decode("utf-8")
+
+        # Ajout du contenu HTML pour la prévisualisation
+        response_data["html"] = results.get("html_content", "")
 
         # Ajout du contenu structuré pour l'affichage frontend
         response_data["content"] = results.get("generated_content", {})
@@ -150,6 +155,10 @@ async def generate_cover_letter(
         
         # Ajout du contenu structuré pour l'affichage frontend
         response_data["content"] = results.get("generated_content", {})
+        
+        # Ajout du HTML si disponible (pour preview instantanée)
+        if "html_content" in results:
+            response_data["html"] = results["html_content"]
 
         return response_data
     except Exception as e:

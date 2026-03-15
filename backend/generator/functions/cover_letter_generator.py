@@ -354,8 +354,7 @@ def build_cover_letter_html_from_chunks(chunks: Dict[str, Any]) -> str:
 
     css = """
     @page { size: a4 portrait; margin: 2.5cm; }
-    body { font-family: Helvetica, sans-serif; font-size: 11pt; line-height: 1.4; color: #000; }
-    .sender { text-align: left; margin-bottom: 30px; font-size: 10pt; }
+    body { font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.4; color: #000; }
     .recipient { text-align: right; margin-bottom: 40px; font-size: 10pt; }
     .meta { text-align: right; margin-bottom: 30px; }
     .object { font-weight: bold; margin-bottom: 20px; }
@@ -364,15 +363,6 @@ def build_cover_letter_html_from_chunks(chunks: Dict[str, Any]) -> str:
     """
 
     html = f"<html><head><style>{css}</style></head><body>"
-
-    # Expéditeur
-    html += "<div class='sender'>"
-    if header.get("fullname_block"): html += f"<strong>{safe(header['fullname_block'])}</strong><br/>"
-    if header.get("location_block"): html += f"{safe(header['location_block'])}<br/>"
-    if header.get("email_block"): html += f"{safe(header['email_block'])}<br/>"
-    if header.get("phone_block"): html += f"{safe(header['phone_block'])}<br/>"
-    if header.get("websites_block"): html += f"{safe(header['websites_block'])}<br/>"
-    html += "</div>"
 
     # Destinataire
     html += "<div class='recipient'>"
@@ -577,6 +567,7 @@ def generate_personalized_cover_letter_docx_and_pdf(
         "docx_path": docx_path,
         "pdf_path": pdf_path,
         "chunks": chunks,
+        "html_content": html_content
     }
 
 

@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 # Chargement des variables d'environnement
@@ -22,6 +22,12 @@ except ImportError:
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
     from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
+
+def _get_first_or_default(items: Optional[List[Any]], default: Any = "") -> Any:
+    """Helper pour récupérer le premier élément d'une liste ou une valeur par défaut."""
+    if items and isinstance(items, list) and len(items) > 0:
+        return items[0]
+    return default
 
 class JobSwipeGeneratorService:
     """
@@ -49,30 +55,40 @@ class JobSwipeGeneratorService:
         cv_parsed: Dict[str, Any],
         offer_parsed: Dict[str, Any],
         api_key: str,
-        model_name: str
+        model_name: str,
+        manual_content: Optional[Dict[str, Any]] = None,
+        style: str = "finance" # Nouveau paramètre
     ) -> Dict[str, Any]:
-        """
-        Génère uniquement le CV (Content -> PDF).
-        Suppose que le parsing est déjà fait.
-        """
         results = {}
 
-        results['cv_parsed'] = cv_parsed
-        results['offer_parsed'] = offer_parsed
-
-        # 2. Génération Contenu CV (One-Shot)
-        user_data = {
-            "profile": {"summary": cv_parsed.get("raw_summary")},
-            "experiences": cv_parsed.get("professional_experiences", []),
-            "projects": cv_parsed.get("academic_projects", []),
-            "education": cv_parsed.get("education", []),
-            "skills": cv_parsed.get("skills", {}),
-            "interests": cv_parsed.get("interests", [])
-        }
-        generated_content = generate_full_cv_content(offer_parsed, user_data, api_key=api_key, model_name=model_name)
-        results['generated_content'] = generated_content
-
-        # 3. Rendu PDF du CV
+        # 1. CHOIX DU CONTENU : IA ou Manuel
+        if manual_content:
+            # L'utilisateur a déjà validé/modifié le texte dans l'interface
+            generated_content = manual_content
+            print("[INFO] Utilisation du contenu manuel fourni par l'utilisateur.")
+        else:
+            # Génération classique via Gemini
+            user_data = {
+                "profile": {
+                    "summary": cv_parsed.get("raw_summary"),
+                    "availability": cv_parsed.get("availability_date"),
+                    "gender": cv_parsed.get("gender")
+                },
+                "experiences": cv_parsed.get("professional_experiences", []),
+                "projects": cv_parsed.get("academic_projects", []),
+                "education": cv_parsed.get("education", []),
+                "skills": cv_parsed.get("skills", {}),
+                "interests": cv_parsed.get("interests", [])
+            }
+            generated_content = generate_full_cv_content(
+                offer_parsed, 
+                user_data, 
+                api_key=api_key, 
+                model_name=model_name
+            )
+        
+        # 2. PRÉPARATION DU TEMPLATE (Style Finance)
+        # On structure les données pour qu'elles collent au template HTML Noir & Blanc
         full_cv_content = {
             "cv_title": {"cv_title": generated_content.get("cv_title")},
             "objective": {"objective": generated_content.get("objective")},
@@ -83,42 +99,56 @@ class JobSwipeGeneratorService:
             "interests": {"interests": generated_content.get("interests", [])}
         }
 
+        # Extraction des contacts
         contacts = cv_parsed.get("contacts", {})
         contact_info = {
             "name": cv_parsed.get("full_name", "Candidat"),
-            "city": (contacts.get("locations") or [""])[0],
-            "phone": (contacts.get("phones") or [""])[0],
-            "email": (contacts.get("emails") or [""])[0],
-            "linkedin": "", 
-            "github": "",
-            "role": generated_content.get("cv_title", "Candidat")
+            "city": _get_first_or_default(contacts.get("locations")),
+            "phone": _get_first_or_default(contacts.get("phones")),
+            "email": _get_first_or_default(contacts.get("emails")),
+            "linkedin": next((l.get("url") for l in cv_parsed.get("social_links", []) if "linkedin" in l.get("url", "").lower()), ""),
+            "github": next((l.get("url") for l in cv_parsed.get("social_links", []) if "github" in l.get("url", "").lower()), ""),
+            "role": generated_content.get("cv_title", "")
         }
-        
-        for link in cv_parsed.get("social_links", []):
-            url = link.get("url", "")
-            platform = link.get("platform", "").lower()
-            if "linkedin" in url.lower() or "linkedin" in platform:
-                contact_info["linkedin"] = url
-            elif "github" in url.lower() or "github" in platform:
-                contact_info["github"] = url
 
-        # Injection des infos de contact pour le frontend
+        # Priorité aux contacts manuels si présents (édition utilisateur)
+        if generated_content.get("contact_info"):
+            contact_info.update(generated_content.get("contact_info"))
+
         generated_content["contact_info"] = contact_info
+        results['generated_content'] = generated_content
 
-        html_cv = generate_cv_html(full_cv_content, contact_info)
+        # 3. GÉNÉRATION DU PDF
+        # Appel de la fonction generate_cv_html (celle que nous avons mise en Noir & Blanc)
+        html_cv = generate_cv_html(full_cv_content, contact_info, style=style)
         
-        cv_base_name = f"cv_optimized_{uuid.uuid4().hex}"
-        html_path = os.path.join(self.output_dir, f"{cv_base_name}.html")
-        pdf_path = os.path.join(self.output_dir, f"{cv_base_name}.pdf")
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(html_cv)
+        pdf_filename = f"cv_finance_{uuid.uuid4().hex}.pdf"
+        pdf_path = os.path.join(self.output_dir, pdf_filename)
         
         convert_html_to_pdf(html_cv, pdf_path)
-        results['paths'] = {
-            'cv_html': html_path,
-            'cv_pdf': pdf_path
-        }
+        results['html_content'] = html_cv
+        results['paths'] = {'cv_pdf': pdf_path}
         return results
+
+    def _generate_cl_html_from_manual(self, content: Dict[str, Any], cv_parsed: Dict[str, Any], offer_parsed: Dict[str, Any]) -> str:
+        """Génère un HTML simple style Finance pour la lettre de motivation."""
+        # Récupération des champs
+        subject = content.get("subject", f"Candidature au poste de {offer_parsed.get('job_title', 'Poste')}")
+        greeting = content.get("greeting", "Madame, Monsieur,")
+        paras = [content.get(f"para{i}") for i in range(1, 6) if content.get(f"para{i}")]
+        signature = content.get("signature", "Cordialement,")
+        
+        # Construction du corps
+        body_paragraphs = "".join([f"<p style='margin-bottom: 12px; text-align: justify;'>{p}</p>" for p in paras if p])
+        
+        return f"""<!DOCTYPE html>
+        <html>
+        <body style="font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; margin: 2.5cm 2cm; color: #000;">
+            <div style="font-weight: bold; margin-bottom: 20px;">Objet : {subject}</div>
+            <div style="margin-bottom: 15px;">{greeting}</div>
+            {body_paragraphs}
+            <div style="margin-top: 30px;">{signature}</div>
+        </body></html>"""
 
     def process_motivation(
         self, 
@@ -126,32 +156,51 @@ class JobSwipeGeneratorService:
         offer_parsed: Dict[str, Any],
         gender: str = "M",
         api_key: str = "",
-        model_name: str = "gemini-1.5-flash"
+        model_name: str = "gemini-1.5-flash",
+        manual_content: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Génère uniquement la lettre de motivation.
         Suppose que le parsing est déjà fait.
         """
         results = {}
+        if manual_content:
+            # CAS 1 : Contenu manuel (édition utilisateur)
+            generated_content = manual_content
+            
+            # Génération du HTML
+            html_content = self._generate_cl_html_from_manual(generated_content, cv_parsed, offer_parsed)
+            
+            # Génération du PDF
+            pdf_filename = f"cover_letter_{uuid.uuid4().hex}.pdf"
+            pdf_path = os.path.join(self.output_dir, pdf_filename)
+            convert_html_to_pdf(html_content, pdf_path)
+            
+            results['paths'] = {'cl_pdf': pdf_path}
+            results['generated_content'] = generated_content
+            results['html_content'] = html_content
+        else:
+            # CAS 2 : Génération par l'IA
+            results['cv_parsed'] = cv_parsed
+            results['offer_parsed'] = offer_parsed
 
-        results['cv_parsed'] = cv_parsed
-        results['offer_parsed'] = offer_parsed
-
-        # 2. Génération Lettre de Motivation
-        cl_result = generate_personalized_cover_letter_docx_and_pdf(
-            offer_parsed=offer_parsed,
-            cv_parsed=cv_parsed,
-            output_dir=self.output_dir,
-            docx_filename=f"cover_letter_{uuid.uuid4().hex}.docx",
-            gender=gender,
-            api_key=api_key,
-            model_name=model_name
-        )
-        results['paths'] = {
-            'cl_docx': cl_result['docx_path'],
-            'cl_pdf': cl_result['pdf_path']
-        }
-        results['generated_content'] = cl_result['chunks']
+            # 2. Génération Lettre de Motivation
+            cl_result = generate_personalized_cover_letter_docx_and_pdf(
+                offer_parsed=offer_parsed,
+                cv_parsed=cv_parsed,
+                output_dir=self.output_dir,
+                docx_filename=f"cover_letter_{uuid.uuid4().hex}.docx",
+                gender=gender,
+                api_key=api_key,
+                model_name=model_name
+            )
+            results['paths'] = {
+                'cl_docx': cl_result['docx_path'],
+                'cl_pdf': cl_result['pdf_path']
+            }
+            results['generated_content'] = cl_result['chunks']
+            results['html_content'] = cl_result.get('html_content', '')
+            
         return results
 
     def process_scoring(
