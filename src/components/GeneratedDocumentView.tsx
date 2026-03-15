@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ArrowLeft, Download, FileText, PenTool, Edit3, Save, Loader2, ChevronDown, PlusCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, FileText, PenTool, Edit3, Save, Loader2, ChevronDown, PlusCircle, Trash2, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface GeneratedDocumentViewProps {
@@ -12,6 +12,7 @@ interface GeneratedDocumentViewProps {
   userProfile?: any;
   initialTab?: 'cv' | 'cl';
   onUpdateContent: (newContent: any) => Promise<void>;
+  onRegenerateWithAI: () => Promise<void>;
 }
 
 // --- Composants UI pour l'éditeur ---
@@ -111,12 +112,14 @@ export const GeneratedDocumentView = ({
   jobTitle, 
   companyName, 
   initialTab,
-  onUpdateContent 
+  onUpdateContent,
+  onRegenerateWithAI
 }: GeneratedDocumentViewProps) => {
   const [activeTab, setActiveTab] = useState<'cv' | 'cl'>(initialTab || (cvData ? 'cv' : 'cl'));
   const [isEditing, setIsEditing] = useState(false);
   const [editableContent, setEditableContent] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Initialisation et synchronisation du contenu éditable
@@ -147,6 +150,17 @@ export const GeneratedDocumentView = ({
       console.error("Erreur lors de la mise à jour:", error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    setIsRegenerating(true);
+    try {
+      await onRegenerateWithAI();
+    } catch (error) {
+      // L'erreur est déjà gérée et affichée par le composant parent
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -265,42 +279,45 @@ export const GeneratedDocumentView = ({
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Top Bar */}
-      <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600">
+      <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 className="font-bold text-slate-800 text-lg">Candidature : {companyName}</h1>
-            <p className="text-xs text-slate-500">{jobTitle}</p>
+          <div className="min-w-0">
+            <h1 className="font-bold text-slate-800 text-base md:text-lg truncate">Candidature : {companyName}</h1>
+            <p className="text-xs text-slate-500 truncate">{jobTitle}</p>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
           {!isEditing ? (
             <button 
               onClick={() => setIsEditing(true)}
-              className="flex items-center px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+              className="flex items-center px-3 md:px-4 h-10 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
             >
-              <Edit3 className="w-4 h-4 mr-2" /> Modifier le contenu
+              <Edit3 className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Modifier</span>
             </button>
           ) : (
             <div className="flex gap-2">
               <button 
-                onClick={() => setIsEditing(false)} 
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 disabled:opacity-50"
+                onClick={() => { setIsEditing(false); if (cvData?.content) setEditableContent(cvData.content); }} 
+                className="px-3 md:px-4 h-10 text-sm font-medium text-slate-600 hover:text-slate-800 disabled:opacity-50 rounded-lg hover:bg-slate-100"
                 disabled={isSaving}
               >
                 Annuler
               </button>
-              <PrimaryButton onClick={handleSave} disabled={isSaving}>
+              <PrimaryButton onClick={handleSave} disabled={isSaving} className="h-10 px-3 md:px-4">
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Génération...
+                    <Loader2 className="w-4 h-4 md:mr-2 animate-spin" />
+                    <span className="hidden md:inline">Génération...</span>
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" /> Appliquer les modifs
+                    <Save className="w-4 h-4 md:mr-2" />
+                    <span className="hidden md:inline">Appliquer</span>
                   </>
                 )}
               </PrimaryButton>
@@ -313,8 +330,10 @@ export const GeneratedDocumentView = ({
               if (activeTab === 'cl' && clData) downloadPdf(clData.pdf, `Lettre_${companyName}.pdf`);
             }}
             disabled={isEditing || isSaving}
+            className="h-10 px-3 md:px-4"
           >
-            <Download className="w-4 h-4 mr-2" /> PDF
+            <Download className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">PDF</span>
           </PrimaryButton>
         </div>
       </header>
@@ -350,13 +369,30 @@ export const GeneratedDocumentView = ({
               <h2 className="font-bold text-slate-800 p-4 border-b border-slate-200 flex items-center gap-2 text-base">
                 <Edit3 className="w-4 h-4" /> Éditeur de Contenu
               </h2>
+              <div className="p-4 border-b border-slate-200">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating || isSaving}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Régénération IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" /> Régénérer avec l'IA
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="flex-1 overflow-y-auto">
                 
                 <EditorSection title="Informations Personnelles">
                   <Field label="Nom complet">
                     <Input value={editableContent?.contact_info?.name || ""} onChange={(e) => handleContactChange('name', e.target.value)} />
                   </Field>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <Field label="Email"><Input value={editableContent?.contact_info?.email || ""} onChange={(e) => handleContactChange('email', e.target.value)} /></Field>
                       <Field label="Téléphone"><Input value={editableContent?.contact_info?.phone || ""} onChange={(e) => handleContactChange('phone', e.target.value)} /></Field>
                   </div>
@@ -379,7 +415,7 @@ export const GeneratedDocumentView = ({
                     <SubSection key={index} title={exp.company || `Expérience ${index + 1}`} onDelete={() => removeArrayItem('experiences', index)}>
                       <Field label="Entreprise"><Input value={exp.company} onChange={e => handleArrayItemChange('experiences', index, 'company', e.target.value)} /></Field>
                       <Field label="Poste"><Input value={exp.target_title} onChange={e => handleArrayItemChange('experiences', index, 'target_title', e.target.value)} /></Field>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Field label="Date début"><Input value={exp.start_date} onChange={e => handleArrayItemChange('experiences', index, 'start_date', e.target.value)} /></Field>
                         <Field label="Date fin"><Input value={exp.end_date} onChange={e => handleArrayItemChange('experiences', index, 'end_date', e.target.value)} /></Field>
                       </div>
@@ -425,7 +461,7 @@ export const GeneratedDocumentView = ({
                     <SubSection key={index} title={edu.school || `Formation ${index + 1}`} onDelete={() => removeArrayItem('education', index)}>
                       <Field label="École / Organisme"><Input value={edu.school} onChange={e => handleArrayItemChange('education', index, 'school', e.target.value)} /></Field>
                       <Field label="Diplôme"><Input value={edu.degree} onChange={e => handleArrayItemChange('education', index, 'degree', e.target.value)} /></Field>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Field label="Date début"><Input value={edu.start_date} onChange={e => handleArrayItemChange('education', index, 'start_date', e.target.value)} /></Field>
                         <Field label="Date fin"><Input value={edu.end_date} onChange={e => handleArrayItemChange('education', index, 'end_date', e.target.value)} /></Field>
                       </div>
@@ -493,7 +529,29 @@ export const GeneratedDocumentView = ({
           )}
 
           {/* Preview Zone */}
-          <div className="flex-1 bg-slate-200/50 p-4 md:p-8 overflow-y-auto flex justify-center shadow-inner">
+          <div className={`flex-1 bg-slate-200/50 p-4 md:p-8 overflow-y-auto flex flex-col items-center shadow-inner ${isEditing ? 'hidden md:flex' : 'flex'}`}>
+            {/* Mobile Tabs */}
+            <div className="w-full max-w-[21cm] md:hidden mb-4">
+              <div className="flex bg-slate-200 rounded-lg p-1">
+                {cvData && (
+                  <button
+                    onClick={() => setActiveTab('cv')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'cv' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600'}`}
+                  >
+                    CV
+                  </button>
+                )}
+                {clData && (
+                  <button
+                    onClick={() => setActiveTab('cl')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'cl' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600'}`}
+                  >
+                    Lettre
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="w-full max-w-[21cm] bg-white shadow-2xl relative min-h-[29.7cm]">
               {activeTab === 'cv' && cvData ? (
                 cvData.html ? (

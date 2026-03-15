@@ -611,6 +611,68 @@ const OffreDetail = () => {
     }
   };
 
+  const handleRegenerateWithAI = async () => {
+    if (!job || !userProfile || !id) {
+      toast({ variant: "destructive", description: "Données manquantes pour la régénération." });
+      return;
+    }
+
+    toast({ description: "Régénération du contenu par l'IA..." });
+
+    try {
+      const cvData = formatProfileForBackend(userProfile);
+      const offerData = formatJobForBackend(job);
+      const API_URL = import.meta.env.VITE_API_URL;
+      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
+      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
+      
+      if (!geminiKey) {
+          toast({ variant: "destructive", description: "Clé API Gemini manquante." });
+          return;
+      }
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      headers['x-gemini-api-key'] = geminiKey;
+      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+
+      const response = await fetch(`${API_URL}/generate-cv`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          cv_data: cvData, 
+          offer_data: offerData,
+          gender: (userProfile as any)?.gender || "M"
+          // manual_content est omis pour déclencher la régénération par l'IA
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Erreur lors de la régénération du CV");
+      }
+
+      const data = await response.json();
+
+      if (data.files?.cv_pdf) {
+        setGeneratedDocs(prevDocs => {
+          const updatedDocs = {
+            ...prevDocs,
+            cv: { pdf: data.files.cv_pdf, content: data.content, html: data.html },
+          };
+          localStorage.setItem(`jobswipe_docs_${id}`, JSON.stringify(updatedDocs));
+          return updatedDocs;
+        });
+        toast({ description: "Contenu régénéré avec succès !" });
+      } else {
+        throw new Error("Le fichier CV PDF régénéré n'a pas été retourné par l'API.");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la régénération du contenu:", error);
+      toast({ variant: "destructive", description: error instanceof Error ? error.message : "Erreur technique lors de la régénération" });
+      throw error;
+    }
+  };
+
   const handleSyncWithExtension = () => {
     if (!generatedDocs?.cv && !generatedDocs?.cl) {
         toast({ variant: "destructive", description: "Veuillez d'abord générer les documents (CV ou Lettre) avant d'envoyer." });
@@ -824,6 +886,7 @@ const OffreDetail = () => {
         userProfile={userProfile}
         initialTab={initialTab}
         onUpdateContent={handleUpdateContent}
+        onRegenerateWithAI={handleRegenerateWithAI}
       />
     );
   }
