@@ -219,8 +219,12 @@ def generate_cv_html(full_cv_content: Dict[str, Any], contact_info: Dict[str, st
     cv_title = full_cv_content.get("cv_title", {}).get("cv_title") if isinstance(full_cv_content.get("cv_title"), dict) else ""
     role_to_use = cv_title or contact_info["role"]
 
+    objective_data = full_cv_content.get("objective", {})
+    objective_str = objective_data.get("objective", "") if isinstance(objective_data, dict) else ""
+
     html_parts = [
         _render_html_head_and_header(contact_info, role_to_use),
+        _render_html_objective(objective_str),
         _render_html_education(full_cv_content.get("education", {}).get("education", [])),
         _render_html_experiences(full_cv_content.get("experiences", {}).get("experiences", [])),
         _render_html_experiences(full_cv_content.get("projects", {}).get("projects", [])), # Inclus en Expérience style finance

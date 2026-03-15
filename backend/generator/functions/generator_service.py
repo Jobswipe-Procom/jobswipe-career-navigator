@@ -49,30 +49,39 @@ class JobSwipeGeneratorService:
         cv_parsed: Dict[str, Any],
         offer_parsed: Dict[str, Any],
         api_key: str,
-        model_name: str
+        model_name: str,
+        manual_content: Optional[Dict[str, Any]] = None  # Argument optionnel ajouté
     ) -> Dict[str, Any]:
-        """
-        Génère uniquement le CV (Content -> PDF).
-        Suppose que le parsing est déjà fait.
-        """
         results = {}
 
-        results['cv_parsed'] = cv_parsed
-        results['offer_parsed'] = offer_parsed
-
-        # 2. Génération Contenu CV (One-Shot)
-        user_data = {
-            "profile": {"summary": cv_parsed.get("raw_summary")},
-            "experiences": cv_parsed.get("professional_experiences", []),
-            "projects": cv_parsed.get("academic_projects", []),
-            "education": cv_parsed.get("education", []),
-            "skills": cv_parsed.get("skills", {}),
-            "interests": cv_parsed.get("interests", [])
-        }
-        generated_content = generate_full_cv_content(offer_parsed, user_data, api_key=api_key, model_name=model_name)
-        results['generated_content'] = generated_content
-
-        # 3. Rendu PDF du CV
+        # 1. CHOIX DU CONTENU : IA ou Manuel
+        if manual_content:
+            # L'utilisateur a déjà validé/modifié le texte dans l'interface
+            generated_content = manual_content
+            print("[INFO] Utilisation du contenu manuel fourni par l'utilisateur.")
+        else:
+            # Génération classique via Gemini
+            user_data = {
+                "profile": {
+                    "summary": cv_parsed.get("raw_summary"),
+                    "availability": cv_parsed.get("availability_date"),
+                    "gender": cv_parsed.get("gender")
+                },
+                "experiences": cv_parsed.get("professional_experiences", []),
+                "projects": cv_parsed.get("academic_projects", []),
+                "education": cv_parsed.get("education", []),
+                "skills": cv_parsed.get("skills", {}),
+                "interests": cv_parsed.get("interests", [])
+            }
+            generated_content = generate_full_cv_content(
+                offer_parsed, 
+                user_data, 
+                api_key=api_key, 
+                model_name=model_name
+            )
+        
+        # 2. PRÉPARATION DU TEMPLATE (Style Finance)
+        # On structure les données pour qu'elles collent au template HTML Noir & Blanc
         full_cv_content = {
             "cv_title": {"cv_title": generated_content.get("cv_title")},
             "objective": {"objective": generated_content.get("objective")},
@@ -83,41 +92,35 @@ class JobSwipeGeneratorService:
             "interests": {"interests": generated_content.get("interests", [])}
         }
 
+        # Extraction des contacts
         contacts = cv_parsed.get("contacts", {})
         contact_info = {
             "name": cv_parsed.get("full_name", "Candidat"),
             "city": (contacts.get("locations") or [""])[0],
             "phone": (contacts.get("phones") or [""])[0],
             "email": (contacts.get("emails") or [""])[0],
-            "linkedin": "", 
-            "github": "",
-            "role": generated_content.get("cv_title", "Candidat")
+            "linkedin": next((l.get("url") for l in cv_parsed.get("social_links", []) if "linkedin" in l.get("url", "").lower()), ""),
+            "github": next((l.get("url") for l in cv_parsed.get("social_links", []) if "github" in l.get("url", "").lower()), ""),
+            "role": generated_content.get("cv_title", "")
         }
-        
-        for link in cv_parsed.get("social_links", []):
-            url = link.get("url", "")
-            platform = link.get("platform", "").lower()
-            if "linkedin" in url.lower() or "linkedin" in platform:
-                contact_info["linkedin"] = url
-            elif "github" in url.lower() or "github" in platform:
-                contact_info["github"] = url
 
-        # Injection des infos de contact pour le frontend
+        # Priorité aux contacts manuels si présents (édition utilisateur)
+        if generated_content.get("contact_info"):
+            contact_info.update(generated_content.get("contact_info"))
+
         generated_content["contact_info"] = contact_info
+        results['generated_content'] = generated_content
 
+        # 3. GÉNÉRATION DU PDF
+        # Appel de la fonction generate_cv_html (celle que nous avons mise en Noir & Blanc)
         html_cv = generate_cv_html(full_cv_content, contact_info)
         
-        cv_base_name = f"cv_optimized_{uuid.uuid4().hex}"
-        html_path = os.path.join(self.output_dir, f"{cv_base_name}.html")
-        pdf_path = os.path.join(self.output_dir, f"{cv_base_name}.pdf")
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(html_cv)
+        pdf_filename = f"cv_finance_{uuid.uuid4().hex}.pdf"
+        pdf_path = os.path.join(self.output_dir, pdf_filename)
         
         convert_html_to_pdf(html_cv, pdf_path)
-        results['paths'] = {
-            'cv_html': html_path,
-            'cv_pdf': pdf_path
-        }
+        results['html_content'] = html_cv
+        results['paths'] = {'cv_pdf': pdf_path}
         return results
 
     def process_motivation(

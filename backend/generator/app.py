@@ -54,7 +54,7 @@ cors_allow_headers = [
 # CORS : doit être le premier middleware ajouté pour envelopper toutes les réponses (y compris prévol OPTIONS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Permettre toutes les origines (le regex gère les 192.168.1.x)
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -114,6 +114,9 @@ async def generate_cv(
         if "cv_pdf" in results.get("paths", {}):
             with open(results["paths"]["cv_pdf"], "rb") as f:
                 response_data["files"]["cv_pdf"] = base64.b64encode(f.read()).decode("utf-8")
+
+        # Ajout du contenu HTML pour la prévisualisation
+        response_data["html"] = results.get("html_content", "")
 
         # Ajout du contenu structuré pour l'affichage frontend
         response_data["content"] = results.get("generated_content", {})

@@ -30,8 +30,8 @@ const OffreDetail = () => {
   const [generatingCL, setGeneratingCL] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [generatedDocs, setGeneratedDocs] = useState<{
-    cv?: { pdf: string; content: any };
-    cl?: { pdf: string; content: any };
+    cv?: { pdf: string; content: any; html?: string };
+    cl?: { pdf: string; content: any; html?: string };
   } | null>(null);
   const [initialTab, setInitialTab] = useState<'cv' | 'cl'>('cv');
   const [showDocuments, setShowDocuments] = useState(false);
@@ -360,7 +360,9 @@ const OffreDetail = () => {
         if (!resCV.ok) throw new Error("Erreur lors de la génération du CV");
         const dataCV = await resCV.json();
         
-        cvResult = dataCV.files?.cv_pdf ? { pdf: dataCV.files.cv_pdf, content: dataCV.content } : undefined;
+        cvResult = dataCV.files?.cv_pdf 
+          ? { pdf: dataCV.files.cv_pdf, content: dataCV.content, html: dataCV.html } 
+          : undefined;
       }
 
       // --- ÉTAPE 2 : Lettre de motivation (si pas déjà générée) ---
@@ -375,7 +377,9 @@ const OffreDetail = () => {
         if (!resCL.ok) throw new Error("Erreur lors de la génération de la lettre");
         const dataCL = await resCL.json();
         
-        clResult = dataCL.files?.cl_pdf ? { pdf: dataCL.files.cl_pdf, content: dataCL.content } : undefined;
+        clResult = dataCL.files?.cl_pdf 
+          ? { pdf: dataCL.files.cl_pdf, content: dataCL.content } 
+          : undefined;
       }
 
       const newDocs = {
@@ -451,7 +455,7 @@ const OffreDetail = () => {
 
       if (data.files?.cv_pdf) {
         const newDocs = {
-          cv: { pdf: data.files.cv_pdf, content: data.content },
+          cv: { pdf: data.files.cv_pdf, content: data.content, html: data.html },
           cl: existingDocs.cl // Conserver la lettre si elle existe
         };
         setInitialTab('cv');
@@ -543,6 +547,67 @@ const OffreDetail = () => {
       toast({ variant: "destructive", description: error instanceof Error ? error.message : "Erreur technique" });
     } finally {
       setGeneratingCL(false);
+    }
+  };
+
+  const handleUpdateContent = async (newContent: any) => {
+    if (!job || !userProfile || !id) {
+      toast({ variant: "destructive", description: "Données manquantes pour la mise à jour." });
+      return;
+    }
+
+    toast({ description: "Mise à jour du document en cours..." });
+
+    try {
+      const cvData = formatProfileForBackend(userProfile);
+      const offerData = formatJobForBackend(job);
+      const API_URL = import.meta.env.VITE_API_URL;
+      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
+      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
+      
+      if (!geminiKey) {
+          toast({ variant: "destructive", description: "Clé API Gemini manquante." });
+          return;
+      }
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      headers['x-gemini-api-key'] = geminiKey;
+      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+
+      const response = await fetch(`${API_URL}/generate-cv`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          cv_data: cvData, 
+          offer_data: offerData, 
+          manual_content: newContent 
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Erreur lors de la mise à jour du CV");
+      }
+
+      const data = await response.json();
+
+      if (data.files?.cv_pdf) {
+        setGeneratedDocs(prevDocs => {
+          const updatedDocs = {
+            ...prevDocs,
+            cv: { pdf: data.files.cv_pdf, content: data.content, html: data.html },
+          };
+          localStorage.setItem(`jobswipe_docs_${id}`, JSON.stringify(updatedDocs));
+          return updatedDocs;
+        });
+        toast({ description: "Document mis à jour avec succès !" });
+      } else {
+        throw new Error("Le fichier CV PDF mis à jour n'a pas été retourné par l'API.");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du contenu:", error);
+      toast({ variant: "destructive", description: error instanceof Error ? error.message : "Erreur technique lors de la mise à jour" });
+      throw error;
     }
   };
 
@@ -758,6 +823,7 @@ const OffreDetail = () => {
         companyName={job.company}
         userProfile={userProfile}
         initialTab={initialTab}
+        onUpdateContent={handleUpdateContent}
       />
     );
   }
