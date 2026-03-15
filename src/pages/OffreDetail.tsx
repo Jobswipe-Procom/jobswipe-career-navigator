@@ -550,7 +550,7 @@ const OffreDetail = () => {
     }
   };
 
-  const handleUpdateContent = async (newContent: any, docType: 'cv' | 'cl') => {
+  const handleUpdateContent = async (newContent: any, docType: 'cv' | 'cl', style: string = "finance") => {
     if (!job || !userProfile || !id) {
       toast({ variant: "destructive", description: "Données manquantes pour la mise à jour." });
       return;
@@ -583,7 +583,8 @@ const OffreDetail = () => {
           cv_data: cvData, 
           offer_data: offerData, 
           gender: (userProfile as any)?.gender || "M",
-          manual_content: newContent 
+          manual_content: newContent,
+          style: style 
         })
       });
 

@@ -56,7 +56,8 @@ class JobSwipeGeneratorService:
         offer_parsed: Dict[str, Any],
         api_key: str,
         model_name: str,
-        manual_content: Optional[Dict[str, Any]] = None  # Argument optionnel ajouté
+        manual_content: Optional[Dict[str, Any]] = None,
+        style: str = "finance" # Nouveau paramètre
     ) -> Dict[str, Any]:
         results = {}
 
@@ -116,10 +117,10 @@ class JobSwipeGeneratorService:
 
         generated_content["contact_info"] = contact_info
         results['generated_content'] = generated_content
-        print(contact_info)
+
         # 3. GÉNÉRATION DU PDF
         # Appel de la fonction generate_cv_html (celle que nous avons mise en Noir & Blanc)
-        html_cv = generate_cv_html(full_cv_content, contact_info)
+        html_cv = generate_cv_html(full_cv_content, contact_info, style=style)
         
         pdf_filename = f"cv_finance_{uuid.uuid4().hex}.pdf"
         pdf_path = os.path.join(self.output_dir, pdf_filename)
@@ -128,6 +129,26 @@ class JobSwipeGeneratorService:
         results['html_content'] = html_cv
         results['paths'] = {'cv_pdf': pdf_path}
         return results
+
+    def _generate_cl_html_from_manual(self, content: Dict[str, Any], cv_parsed: Dict[str, Any], offer_parsed: Dict[str, Any]) -> str:
+        """Génère un HTML simple style Finance pour la lettre de motivation."""
+        # Récupération des champs
+        subject = content.get("subject", f"Candidature au poste de {offer_parsed.get('job_title', 'Poste')}")
+        greeting = content.get("greeting", "Madame, Monsieur,")
+        paras = [content.get(f"para{i}") for i in range(1, 6) if content.get(f"para{i}")]
+        signature = content.get("signature", "Cordialement,")
+        
+        # Construction du corps
+        body_paragraphs = "".join([f"<p style='margin-bottom: 12px; text-align: justify;'>{p}</p>" for p in paras if p])
+        
+        return f"""<!DOCTYPE html>
+        <html>
+        <body style="font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; margin: 2.5cm 2cm; color: #000;">
+            <div style="font-weight: bold; margin-bottom: 20px;">Objet : {subject}</div>
+            <div style="margin-bottom: 15px;">{greeting}</div>
+            {body_paragraphs}
+            <div style="margin-top: 30px;">{signature}</div>
+        </body></html>"""
 
     def process_motivation(
         self, 
@@ -143,22 +164,12 @@ class JobSwipeGeneratorService:
         Suppose que le parsing est déjà fait.
         """
         results = {}
-
         if manual_content:
             # CAS 1 : Contenu manuel (édition utilisateur)
             generated_content = manual_content
             
-            # Récupération des infos de contact pour l'en-tête (similaire à process_cv)
-            contacts = cv_parsed.get("contacts", {})
-            contact_info = {
-                "name": cv_parsed.get("full_name", "Candidat"),
-                "city": _get_first_or_default(contacts.get("locations")),
-                "phone": _get_first_or_default(contacts.get("phones")),
-                "email": _get_first_or_default(contacts.get("emails")),
-            }
-            
             # Génération du HTML
-            html_content = self._generate_cl_html_from_manual(generated_content, contact_info, offer_parsed)
+            html_content = self._generate_cl_html_from_manual(generated_content, cv_parsed, offer_parsed)
             
             # Génération du PDF
             pdf_filename = f"cover_letter_{uuid.uuid4().hex}.pdf"
@@ -168,7 +179,6 @@ class JobSwipeGeneratorService:
             results['paths'] = {'cl_pdf': pdf_path}
             results['generated_content'] = generated_content
             results['html_content'] = html_content
-
         else:
             # CAS 2 : Génération par l'IA
             results['cv_parsed'] = cv_parsed
@@ -189,30 +199,9 @@ class JobSwipeGeneratorService:
                 'cl_pdf': cl_result['pdf_path']
             }
             results['generated_content'] = cl_result['chunks']
-            # On récupère le HTML généré par la fonction pour le renvoyer au front
             results['html_content'] = cl_result.get('html_content', '')
             
         return results
-
-    def _generate_cl_html_from_manual(self, content: Dict[str, Any], contact_info: Dict[str, Any], offer_parsed: Dict[str, Any]) -> str:
-        """Génère un HTML simple style Finance pour la lettre de motivation."""
-        # Récupération des champs
-        subject = content.get("subject", f"Candidature au poste de {offer_parsed.get('job_title', 'Poste')}")
-        greeting = content.get("greeting", "Madame, Monsieur,")
-        paras = [content.get(f"para{i}") for i in range(1, 6) if content.get(f"para{i}")]
-        signature = content.get("signature", "Cordialement,")
-        
-        # Construction du corps
-        body_paragraphs = "".join([f"<p style='margin-bottom: 12px; text-align: justify;'>{p}</p>" for p in paras])
-        
-        return f"""<!DOCTYPE html>
-        <html>
-        <body style="font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; margin: 2.5cm 2cm; color: #000;">
-            <div style="font-weight: bold; margin-bottom: 20px;">Objet : {subject}</div>
-            <div style="margin-bottom: 15px;">{greeting}</div>
-            {body_paragraphs}
-            <div style="margin-top: 30px;">{signature}</div>
-        </body></html>"""
 
     def process_scoring(
         self, 

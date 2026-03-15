@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ArrowLeft, Download, FileText, PenTool, Edit3, Save, Loader2, ChevronDown, PlusCircle, Trash2, Sparkles } from "lucide-react";
+import { ArrowLeft, Download, FileText, PenTool, Edit3, Save, Loader2, ChevronDown, PlusCircle, Trash2, Sparkles, LayoutTemplate } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface GeneratedDocumentViewProps {
@@ -11,7 +11,7 @@ interface GeneratedDocumentViewProps {
   companyName: string;
   userProfile?: any;
   initialTab?: 'cv' | 'cl';
-  onUpdateContent: (newContent: any, type: 'cv' | 'cl') => Promise<void>;
+  onUpdateContent: (newContent: any, type: 'cv' | 'cl', style?: string) => Promise<void>;
   onRegenerateWithAI: () => Promise<void>;
 }
 
@@ -120,6 +120,7 @@ export const GeneratedDocumentView = ({
   const [editableContent, setEditableContent] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState<string>("finance");
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Initialisation et synchronisation du contenu éditable
@@ -144,7 +145,7 @@ export const GeneratedDocumentView = ({
     setIsSaving(true);
     try {
       // On envoie le contenu modifié au parent (qui appelle le backend)
-      await onUpdateContent(editableContent, activeTab);
+      await onUpdateContent(editableContent, activeTab, selectedStyle);
       setIsEditing(false);
     } catch (error) {
       console.error("Erreur lors de la mise à jour:", error);
@@ -162,6 +163,13 @@ export const GeneratedDocumentView = ({
     } finally {
       setIsRegenerating(false);
     }
+  };
+
+  const changeStyle = async (newStyle: string) => {
+      setSelectedStyle(newStyle);
+      if (editableContent && activeTab === 'cv') {
+          await onUpdateContent(editableContent, 'cv', newStyle);
+      }
   };
 
   // --- Fonctions de mise à jour de l'état (editableContent) ---
@@ -369,6 +377,30 @@ export const GeneratedDocumentView = ({
               <h2 className="font-bold text-slate-800 p-4 border-b border-slate-200 flex items-center gap-2 text-base">
                 <Edit3 className="w-4 h-4" /> Éditeur de Contenu
               </h2>
+              
+              {/* Sélecteur de Style (Uniquement pour CV) */}
+              {activeTab === 'cv' && (
+                <div className="p-4 border-b border-slate-200 bg-slate-50">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                        <LayoutTemplate className="w-3 h-3" /> Design du CV
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button 
+                            onClick={() => changeStyle('finance')}
+                            className={`px-2 py-2 text-xs font-medium rounded border ${selectedStyle === 'finance' ? 'bg-white border-indigo-500 text-indigo-700 shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                            Finance (Classique)
+                        </button>
+                        <button 
+                            onClick={() => changeStyle('modern')}
+                            className={`px-2 py-2 text-xs font-medium rounded border ${selectedStyle === 'modern' ? 'bg-white border-indigo-500 text-indigo-700 shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                            Moderne (Bleu)
+                        </button>
+                    </div>
+                </div>
+              )}
+
               <div className="p-4 border-b border-slate-200">
                 <button
                   onClick={handleRegenerate}

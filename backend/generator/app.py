@@ -71,6 +71,7 @@ class ApplicationRequest(BaseModel):
     cv_data: Dict[str, Any]
     offer_data: Dict[str, Any]
     gender: str = "M"  # "M" pour masculin, "F" pour féminin
+    style: str = "finance" # finance, modern
     manual_content: Optional[Dict[str, Any]] = None  # si présent : pas d'appel Gemini, HTML puis PDF direct
 
 class BatchScoreRequest(BaseModel):
@@ -106,7 +107,8 @@ async def generate_cv(
             request.cv_data, request.offer_data,
             api_key=api_key,
             model_name=x_gemini_model_name,
-            manual_content=request.manual_content
+            manual_content=request.manual_content,
+            style=request.style
         )
         
         response_data = {"files": {}}

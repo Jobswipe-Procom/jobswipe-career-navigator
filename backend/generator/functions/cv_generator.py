@@ -23,11 +23,13 @@ def format_rich_text(text: str) -> str:
     return re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", safe_text)
 
 # ===========================
-#  Style Finance (Black & White)
+#  CSS Styles Definitions
 # ===========================
 
-def _render_html_head_and_header(contact_info: Dict[str, str], role: str) -> str:
-    css_styles = """
+def _get_css(style: str) -> str:
+    # 1. STYLE FINANCE (Classique, Noir & Blanc, Serif)
+    if style == "finance":
+        return """
     @page {
         size: a4 portrait;
         margin: 1.2cm;
@@ -109,6 +111,37 @@ def _render_html_head_and_header(contact_info: Dict[str, str], role: str) -> str
     }
     """
     
+    # 2. STYLE MODERNE (Sans-serif, Accents Bleus)
+    elif style == "modern":
+        return """
+    @page { size: a4 portrait; margin: 1cm; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #333; font-size: 10pt; line-height: 1.3; }
+    p { margin: 0; padding: 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+    td { vertical-align: top; }
+    
+    .header-container { text-align: left; margin-bottom: 20px; border-bottom: 2px solid #2980b9; padding-bottom: 10px; }
+    h1 { font-size: 24pt; margin: 0; color: #2c3e50; text-transform: uppercase; letter-spacing: 1px; }
+    .role { font-size: 12pt; color: #2980b9; font-weight: bold; margin-top: 5px; }
+    .contact-bar { margin-top: 8px; font-size: 9pt; color: #7f8c8d; }
+    
+    .cv-section { margin-bottom: 15px; }
+    .cv-section h2 { 
+        font-size: 12pt; color: #2980b9; text-transform: uppercase; font-weight: bold; 
+        margin-top: 10px; margin-bottom: 8px; 
+    }
+    
+    .subsection-title { font-weight: bold; color: #2c3e50; font-size: 10.5pt; }
+    .subsection-dates { text-align: right; color: #7f8c8d; font-size: 9pt; }
+    
+    ul { margin-left: 15px; padding-left: 0; margin-top: 3px; }
+    li { margin-bottom: 3px; text-align: justify; color: #444; }
+    a { color: #2980b9; text-decoration: none; }
+    """
+
+    return ""
+
+def _render_header_block(contact_info: Dict[str, str], role: str, style: str) -> str:
     # Barre de contact formatée sur une ligne
     contact_parts = [
         contact_info.get('email'),
@@ -123,19 +156,22 @@ def _render_html_head_and_header(contact_info: Dict[str, str], role: str) -> str
 
     contact_line = " | ".join([html_escape(p) for p in contact_parts if p])
 
-    return f"""<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <style>{css_styles}</style>
-</head>
-<body>
-    <div class="header-container">
+    if style == "modern":
+        return f"""
+        <div class="header-container">
+            <h1>{html_escape(contact_info.get('name', ''))}</h1>
+            <div class="role">{html_escape(role)}</div>
+            <div class="contact-bar">{contact_line}</div>
+        </div>
+        """
+    else: # Finance (default)
+        return f"""
+        <div class="header-container">
         <h1>{html_escape(contact_info.get('name', ''))}</h1>
         <div class="contact-bar">{contact_line}</div>
         <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">{html_escape(role)}</div>
     </div>
-"""
+        """
 
 def _render_html_objective(objective: str) -> str:
     if not objective: return ""
@@ -182,8 +218,11 @@ def _render_html_education(education_list: List[Dict[str, Any]]) -> str:
         
         bullets = ""
         if edu.get("bullets"):
-            bullets = f"<ul><li>{format_rich_text(' '.join(edu.get('bullets')))}</li></ul>"
-
+            # Correction: Itérer sur chaque puce pour créer une liste <li> correcte
+            # et s'assurer que chaque élément est une chaîne de caractères.
+            bullet_items = "".join([f"<li>{format_rich_text(str(b))}</li>" for b in edu.get("bullets", []) if str(b).strip()])
+            if bullet_items:
+                bullets = f"<ul>{bullet_items}</ul>"
         html_blocks.append(f"""
             <table>
                 <tr>
@@ -198,6 +237,27 @@ def _render_html_education(education_list: List[Dict[str, Any]]) -> str:
             {bullets}
         """)
     return f'<div class="cv-section"><h2>Formation</h2>{"".join(html_blocks)}</div>'
+
+def _render_html_projects(projects: List[Dict[str, Any]]) -> str:
+    if not projects: return ""
+    html_blocks = []
+    for proj in projects:
+        title = format_rich_text(proj.get("target_title") or proj.get("source_title", ""))
+        tech_stack_list = proj.get("tech_stack", [])
+        tech_stack_str = ", ".join(tech_stack_list) if tech_stack_list else ""
+        
+        bullets = "".join([f"<li>{format_rich_text(b)}</li>" for b in proj.get("bullets", []) if b.strip()])
+
+        html_blocks.append(f"""
+            <table>
+                <tr>
+                    <td class="subsection-title">{title}</td>
+                    <td class="subsection-dates">{tech_stack_str}</td>
+                </tr>
+            </table>
+            <ul>{bullets}</ul>
+        """)
+    return f'<div class="cv-section"><h2>Projets</h2>{"".join(html_blocks)}</div>'
 
 def _render_html_skills(skills: Dict[str, Any]) -> str:
     sections = skills.get("sections") or []
@@ -220,19 +280,22 @@ def _render_html_activities(interests: List[Dict[str, Any]]) -> str:
     
     return f'<div class="cv-section"><h2>Informations Complémentaires</h2><p>{" ; ".join(items)}</p></div>'
 
-def generate_cv_html(full_cv_content: Dict[str, Any], contact_info: Dict[str, str]) -> str:
+def generate_cv_html(full_cv_content: Dict[str, Any], contact_info: Dict[str, str], style: str = "finance") -> str:
     cv_title = full_cv_content.get("cv_title", {}).get("cv_title") if isinstance(full_cv_content.get("cv_title"), dict) else ""
     role_to_use = cv_title or contact_info["role"]
+
+    css = _get_css(style)
 
     objective_data = full_cv_content.get("objective", {})
     objective_str = objective_data.get("objective", "") if isinstance(objective_data, dict) else ""
 
     html_parts = [
-        _render_html_head_and_header(contact_info, role_to_use),
+        f'<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>{css}</style></head><body>',
+        _render_header_block(contact_info, role_to_use, style),
         _render_html_objective(objective_str),
         _render_html_education(full_cv_content.get("education", {}).get("education", [])),
         _render_html_experiences(full_cv_content.get("experiences", {}).get("experiences", [])),
-        _render_html_experiences(full_cv_content.get("projects", {}).get("projects", [])), # Inclus en Expérience style finance
+        _render_html_projects(full_cv_content.get("projects", {}).get("projects", [])),
         _render_html_skills(full_cv_content.get("skills", {}).get("skills", {})),
         _render_html_activities(full_cv_content.get("interests", {}).get("interests", [])),
         "</body></html>"
