@@ -378,7 +378,7 @@ const OffreDetail = () => {
         const dataCL = await resCL.json();
         
         clResult = dataCL.files?.cl_pdf 
-          ? { pdf: dataCL.files.cl_pdf, content: dataCL.content } 
+          ? { pdf: dataCL.files.cl_pdf, content: dataCL.content, html: dataCL.html } 
           : undefined;
       }
 
@@ -531,7 +531,7 @@ const OffreDetail = () => {
       if (data.files?.cl_pdf) {
         const newDocs = {
           cv: existingDocs.cv, // Conserver le CV s'il existe
-          cl: { pdf: data.files.cl_pdf, content: data.content }
+          cl: { pdf: data.files.cl_pdf, content: data.content, html: data.html }
         };
         setInitialTab('cl');
         setShowDocuments(true);
@@ -550,7 +550,7 @@ const OffreDetail = () => {
     }
   };
 
-  const handleUpdateContent = async (newContent: any) => {
+  const handleUpdateContent = async (newContent: any, docType: 'cv' | 'cl') => {
     if (!job || !userProfile || !id) {
       toast({ variant: "destructive", description: "Données manquantes pour la mise à jour." });
       return;
@@ -574,28 +574,46 @@ const OffreDetail = () => {
       headers['x-gemini-api-key'] = geminiKey;
       if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-      const response = await fetch(`${API_URL}/generate-cv`, {
+      const endpoint = docType === 'cv' ? '/generate-cv' : '/generate-cover-letter';
+      
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
           cv_data: cvData, 
           offer_data: offerData, 
+          gender: (userProfile as any)?.gender || "M",
           manual_content: newContent 
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de la mise à jour du CV");
+        throw new Error(errorData.detail || "Erreur lors de la mise à jour du document");
       }
 
       const data = await response.json();
 
-      if (data.files?.cv_pdf) {
+      if (docType === 'cv' && data.files?.cv_pdf) {
         setGeneratedDocs(prevDocs => {
           const updatedDocs = {
             ...prevDocs,
             cv: { pdf: data.files.cv_pdf, content: data.content, html: data.html },
+          };
+          localStorage.setItem(`jobswipe_docs_${id}`, JSON.stringify(updatedDocs));
+          return updatedDocs;
+        });
+        toast({ description: "CV mis à jour avec succès !" });
+      } 
+      else if (docType === 'cl' && data.files?.cl_pdf) {
+        setGeneratedDocs(prevDocs => {
+          const updatedDocs = {
+            ...prevDocs,
+            cl: { 
+              pdf: data.files.cl_pdf, 
+              content: data.content,
+              html: data.html || prevDocs?.cl?.html // Fallback si pas de HTML renvoyé (cas update manuel vs IA)
+            },
           };
           localStorage.setItem(`jobswipe_docs_${id}`, JSON.stringify(updatedDocs));
           return updatedDocs;

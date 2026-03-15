@@ -11,7 +11,7 @@ interface GeneratedDocumentViewProps {
   companyName: string;
   userProfile?: any;
   initialTab?: 'cv' | 'cl';
-  onUpdateContent: (newContent: any) => Promise<void>;
+  onUpdateContent: (newContent: any, type: 'cv' | 'cl') => Promise<void>;
   onRegenerateWithAI: () => Promise<void>;
 }
 
@@ -144,7 +144,7 @@ export const GeneratedDocumentView = ({
     setIsSaving(true);
     try {
       // On envoie le contenu modifié au parent (qui appelle le backend)
-      await onUpdateContent(editableContent);
+      await onUpdateContent(editableContent, activeTab);
       setIsEditing(false);
     } catch (error) {
       console.error("Erreur lors de la mise à jour:", error);
@@ -388,134 +388,173 @@ export const GeneratedDocumentView = ({
               </div>
               <div className="flex-1 overflow-y-auto">
                 
-                <EditorSection title="Informations Personnelles">
-                  <Field label="Nom complet">
-                    <Input value={editableContent?.contact_info?.name || ""} onChange={(e) => handleContactChange('name', e.target.value)} />
-                  </Field>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Field label="Email"><Input value={editableContent?.contact_info?.email || ""} onChange={(e) => handleContactChange('email', e.target.value)} /></Field>
-                      <Field label="Téléphone"><Input value={editableContent?.contact_info?.phone || ""} onChange={(e) => handleContactChange('phone', e.target.value)} /></Field>
-                  </div>
-                  <Field label="Ville / Pays"><Input value={editableContent?.contact_info?.city || ""} onChange={(e) => handleContactChange('city', e.target.value)} /></Field>
-                  <Field label="LinkedIn"><Input value={editableContent?.contact_info?.linkedin || ""} onChange={(e) => handleContactChange('linkedin', e.target.value)} /></Field>
-                  <Field label="Github"><Input value={editableContent?.contact_info?.github || ""} onChange={(e) => handleContactChange('github', e.target.value)} /></Field>
-                </EditorSection>
-
-                <EditorSection title="Infos Générales">
-                  <Field label="Titre du poste ciblé">
-                    <Input value={editableContent?.cv_title || ""} onChange={(e) => handleFieldChange('cv_title', e.target.value)} />
-                  </Field>
-                  <Field label="Résumé / Objectif">
-                    <Textarea className="min-h-[120px]" value={editableContent?.objective || ""} onChange={(e) => handleFieldChange('objective', e.target.value)} />
-                  </Field>
-                </EditorSection>
-
-                <EditorSection title="Expériences Professionnelles">
-                  {(editableContent?.experiences || []).map((exp: any, index: number) => (
-                    <SubSection key={index} title={exp.company || `Expérience ${index + 1}`} onDelete={() => removeArrayItem('experiences', index)}>
-                      <Field label="Entreprise"><Input value={exp.company} onChange={e => handleArrayItemChange('experiences', index, 'company', e.target.value)} /></Field>
-                      <Field label="Poste"><Input value={exp.target_title} onChange={e => handleArrayItemChange('experiences', index, 'target_title', e.target.value)} /></Field>
+                {activeTab === 'cv' ? (
+                  <>
+                    <EditorSection title="Informations Personnelles">
+                      <Field label="Nom complet">
+                        <Input value={editableContent?.contact_info?.name || ""} onChange={(e) => handleContactChange('name', e.target.value)} />
+                      </Field>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <Field label="Date début"><Input value={exp.start_date} onChange={e => handleArrayItemChange('experiences', index, 'start_date', e.target.value)} /></Field>
-                        <Field label="Date fin"><Input value={exp.end_date} onChange={e => handleArrayItemChange('experiences', index, 'end_date', e.target.value)} /></Field>
+                          <Field label="Email"><Input value={editableContent?.contact_info?.email || ""} onChange={(e) => handleContactChange('email', e.target.value)} /></Field>
+                          <Field label="Téléphone"><Input value={editableContent?.contact_info?.phone || ""} onChange={(e) => handleContactChange('phone', e.target.value)} /></Field>
                       </div>
-                      <Field label="Lieu"><Input value={exp.location} onChange={e => handleArrayItemChange('experiences', index, 'location', e.target.value)} /></Field>
-                      <Field label="Missions / Tâches">
-                        <div className="space-y-2">
-                          {(exp.bullets || []).map((bullet: string, bIndex: number) => (
-                            <div key={bIndex} className="flex items-center gap-2">
-                              <Textarea value={bullet} onChange={e => handleBulletChange('experiences', index, bIndex, e.target.value)} className="min-h-[40px]" />
-                              <button onClick={() => removeBullet('experiences', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          ))}
-                          <AddButton onClick={() => addBullet('experiences', index)}>Ajouter une mission</AddButton>
-                        </div>
-                      </Field>
-                    </SubSection>
-                  ))}
-                  <AddButton onClick={() => addArrayItem('experiences', newExperienceTemplate)}>Ajouter une expérience</AddButton>
-                </EditorSection>
+                      <Field label="Ville / Pays"><Input value={editableContent?.contact_info?.city || ""} onChange={(e) => handleContactChange('city', e.target.value)} /></Field>
+                      <Field label="LinkedIn"><Input value={editableContent?.contact_info?.linkedin || ""} onChange={(e) => handleContactChange('linkedin', e.target.value)} /></Field>
+                      <Field label="Github"><Input value={editableContent?.contact_info?.github || ""} onChange={(e) => handleContactChange('github', e.target.value)} /></Field>
+                    </EditorSection>
 
-                <EditorSection title="Projets">
-                  {(editableContent?.projects || []).map((proj: any, index: number) => (
-                    <SubSection key={index} title={proj.target_title || `Projet ${index + 1}`} onDelete={() => removeArrayItem('projects', index)}>
-                      <Field label="Nom du projet"><Input value={proj.target_title} onChange={e => handleArrayItemChange('projects', index, 'target_title', e.target.value)} /></Field>
-                      <Field label="Description">
-                        <div className="space-y-2">
-                          {(proj.bullets || []).map((bullet: string, bIndex: number) => (
-                            <div key={bIndex} className="flex items-center gap-2">
-                              <Textarea value={bullet} onChange={e => handleBulletChange('projects', index, bIndex, e.target.value)} className="min-h-[40px]" />
-                              <button onClick={() => removeBullet('projects', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          ))}
-                          <AddButton onClick={() => addBullet('projects', index)}>Ajouter une description</AddButton>
-                        </div>
+                    <EditorSection title="Infos Générales">
+                      <Field label="Titre du poste ciblé">
+                        <Input value={editableContent?.cv_title || ""} onChange={(e) => handleFieldChange('cv_title', e.target.value)} />
                       </Field>
-                    </SubSection>
-                  ))}
-                  <AddButton onClick={() => addArrayItem('projects', newProjectTemplate)}>Ajouter un projet</AddButton>
-                </EditorSection>
-
-                <EditorSection title="Formation">
-                  {(editableContent?.education || []).map((edu: any, index: number) => (
-                    <SubSection key={index} title={edu.school || `Formation ${index + 1}`} onDelete={() => removeArrayItem('education', index)}>
-                      <Field label="École / Organisme"><Input value={edu.school} onChange={e => handleArrayItemChange('education', index, 'school', e.target.value)} /></Field>
-                      <Field label="Diplôme"><Input value={edu.degree} onChange={e => handleArrayItemChange('education', index, 'degree', e.target.value)} /></Field>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <Field label="Date début"><Input value={edu.start_date} onChange={e => handleArrayItemChange('education', index, 'start_date', e.target.value)} /></Field>
-                        <Field label="Date fin"><Input value={edu.end_date} onChange={e => handleArrayItemChange('education', index, 'end_date', e.target.value)} /></Field>
-                      </div>
-                      <Field label="Détails">
-                        <div className="space-y-2">
-                          {(edu.bullets || []).map((bullet: string, bIndex: number) => (
-                            <div key={bIndex} className="flex items-center gap-2">
-                              <Textarea value={bullet} onChange={e => handleBulletChange('education', index, bIndex, e.target.value)} className="min-h-[40px]" />
-                              <button onClick={() => removeBullet('education', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          ))}
-                          <AddButton onClick={() => addBullet('education', index)}>Ajouter un détail</AddButton>
-                        </div>
+                      <Field label="Résumé / Objectif">
+                        <Textarea className="min-h-[120px]" value={editableContent?.objective || ""} onChange={(e) => handleFieldChange('objective', e.target.value)} />
                       </Field>
-                    </SubSection>
-                  ))}
-                  <AddButton onClick={() => addArrayItem('education', newEducationTemplate)}>Ajouter une formation</AddButton>
-                </EditorSection>
+                    </EditorSection>
 
-                <EditorSection title="Compétences">
-                  {(editableContent?.skills?.sections || []).map((section: any, sIndex: number) => (
-                     <SubSection key={sIndex} title={section.section_title || `Section ${sIndex + 1}`} onDelete={() => removeSkillSection(sIndex)}>
-                        <Field label="Titre de la section">
-                          <Input value={section.section_title} onChange={e => handleSkillSectionChange(sIndex, 'section_title', e.target.value)} />
-                        </Field>
-                        <Field label="Compétences">
-                          <div className="space-y-2">
-                            {(section.items || []).map((item: string, iIndex: number) => (
-                              <div key={iIndex} className="flex items-center gap-2">
-                                <Input value={item} onChange={e => handleSkillItemChange(sIndex, iIndex, e.target.value)} />
-                                <button onClick={() => removeSkillItem(sIndex, iIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                              </div>
-                            ))}
-                            <AddButton onClick={() => addSkillItem(sIndex)}>Ajouter une compétence</AddButton>
+                    <EditorSection title="Expériences Professionnelles">
+                      {(editableContent?.experiences || []).map((exp: any, index: number) => (
+                        <SubSection key={index} title={exp.company || `Expérience ${index + 1}`} onDelete={() => removeArrayItem('experiences', index)}>
+                          <Field label="Entreprise"><Input value={exp.company} onChange={e => handleArrayItemChange('experiences', index, 'company', e.target.value)} /></Field>
+                          <Field label="Poste"><Input value={exp.target_title} onChange={e => handleArrayItemChange('experiences', index, 'target_title', e.target.value)} /></Field>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Field label="Date début"><Input value={exp.start_date} onChange={e => handleArrayItemChange('experiences', index, 'start_date', e.target.value)} /></Field>
+                            <Field label="Date fin"><Input value={exp.end_date} onChange={e => handleArrayItemChange('experiences', index, 'end_date', e.target.value)} /></Field>
                           </div>
-                        </Field>
-                     </SubSection>
-                  ))}
-                  <AddButton onClick={addSkillSection}>Ajouter une section de compétences</AddButton>
-                </EditorSection>
+                          <Field label="Lieu"><Input value={exp.location} onChange={e => handleArrayItemChange('experiences', index, 'location', e.target.value)} /></Field>
+                          <Field label="Missions / Tâches">
+                            <div className="space-y-2">
+                              {(exp.bullets || []).map((bullet: string, bIndex: number) => (
+                                <div key={bIndex} className="flex items-center gap-2">
+                                  <Textarea value={bullet} onChange={e => handleBulletChange('experiences', index, bIndex, e.target.value)} className="min-h-[40px]" />
+                                  <button onClick={() => removeBullet('experiences', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              ))}
+                              <AddButton onClick={() => addBullet('experiences', index)}>Ajouter une mission</AddButton>
+                            </div>
+                          </Field>
+                        </SubSection>
+                      ))}
+                      <AddButton onClick={() => addArrayItem('experiences', newExperienceTemplate)}>Ajouter une expérience</AddButton>
+                    </EditorSection>
 
-                <EditorSection title="Centres d'Intérêt">
-                  {(editableContent?.interests || []).map((interest: any, index: number) => (
-                    <SubSection key={index} title={interest.label || `Intérêt ${index + 1}`} onDelete={() => removeArrayItem('interests', index)}>
-                      <Field label="Label (ex: Course à pied)">
-                        <Input value={interest.label} onChange={e => handleArrayItemChange('interests', index, 'label', e.target.value)} />
+                    <EditorSection title="Projets">
+                      {(editableContent?.projects || []).map((proj: any, index: number) => (
+                        <SubSection key={index} title={proj.target_title || `Projet ${index + 1}`} onDelete={() => removeArrayItem('projects', index)}>
+                          <Field label="Nom du projet"><Input value={proj.target_title} onChange={e => handleArrayItemChange('projects', index, 'target_title', e.target.value)} /></Field>
+                          <Field label="Description">
+                            <div className="space-y-2">
+                              {(proj.bullets || []).map((bullet: string, bIndex: number) => (
+                                <div key={bIndex} className="flex items-center gap-2">
+                                  <Textarea value={bullet} onChange={e => handleBulletChange('projects', index, bIndex, e.target.value)} className="min-h-[40px]" />
+                                  <button onClick={() => removeBullet('projects', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              ))}
+                              <AddButton onClick={() => addBullet('projects', index)}>Ajouter une description</AddButton>
+                            </div>
+                          </Field>
+                        </SubSection>
+                      ))}
+                      <AddButton onClick={() => addArrayItem('projects', newProjectTemplate)}>Ajouter un projet</AddButton>
+                    </EditorSection>
+
+                    {/* ... Autres sections CV (Education, Skills, Interests) ... */}
+                    <EditorSection title="Formation">
+                      {(editableContent?.education || []).map((edu: any, index: number) => (
+                        <SubSection key={index} title={edu.school || `Formation ${index + 1}`} onDelete={() => removeArrayItem('education', index)}>
+                          <Field label="École / Organisme"><Input value={edu.school} onChange={e => handleArrayItemChange('education', index, 'school', e.target.value)} /></Field>
+                          <Field label="Diplôme"><Input value={edu.degree} onChange={e => handleArrayItemChange('education', index, 'degree', e.target.value)} /></Field>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Field label="Date début"><Input value={edu.start_date} onChange={e => handleArrayItemChange('education', index, 'start_date', e.target.value)} /></Field>
+                            <Field label="Date fin"><Input value={edu.end_date} onChange={e => handleArrayItemChange('education', index, 'end_date', e.target.value)} /></Field>
+                          </div>
+                          <Field label="Détails">
+                            <div className="space-y-2">
+                              {(edu.bullets || []).map((bullet: string, bIndex: number) => (
+                                <div key={bIndex} className="flex items-center gap-2">
+                                  <Textarea value={bullet} onChange={e => handleBulletChange('education', index, bIndex, e.target.value)} className="min-h-[40px]" />
+                                  <button onClick={() => removeBullet('education', index, bIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              ))}
+                              <AddButton onClick={() => addBullet('education', index)}>Ajouter un détail</AddButton>
+                            </div>
+                          </Field>
+                        </SubSection>
+                      ))}
+                      <AddButton onClick={() => addArrayItem('education', newEducationTemplate)}>Ajouter une formation</AddButton>
+                    </EditorSection>
+                    
+                    <EditorSection title="Compétences">
+                      {(editableContent?.skills?.sections || []).map((section: any, sIndex: number) => (
+                        <SubSection key={sIndex} title={section.section_title || `Section ${sIndex + 1}`} onDelete={() => removeSkillSection(sIndex)}>
+                            <Field label="Titre de la section">
+                              <Input value={section.section_title} onChange={e => handleSkillSectionChange(sIndex, 'section_title', e.target.value)} />
+                            </Field>
+                            <Field label="Compétences">
+                              <div className="space-y-2">
+                                {(section.items || []).map((item: string, iIndex: number) => (
+                                  <div key={iIndex} className="flex items-center gap-2">
+                                    <Input value={item} onChange={e => handleSkillItemChange(sIndex, iIndex, e.target.value)} />
+                                    <button onClick={() => removeSkillItem(sIndex, iIndex)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                ))}
+                                <AddButton onClick={() => addSkillItem(sIndex)}>Ajouter une compétence</AddButton>
+                              </div>
+                            </Field>
+                        </SubSection>
+                      ))}
+                      <AddButton onClick={addSkillSection}>Ajouter une section de compétences</AddButton>
+                    </EditorSection>
+
+                    <EditorSection title="Centres d'Intérêt">
+                      {(editableContent?.interests || []).map((interest: any, index: number) => (
+                        <SubSection key={index} title={interest.label || `Intérêt ${index + 1}`} onDelete={() => removeArrayItem('interests', index)}>
+                          <Field label="Label (ex: Course à pied)">
+                            <Input value={interest.label} onChange={e => handleArrayItemChange('interests', index, 'label', e.target.value)} />
+                          </Field>
+                          <Field label="Description (ex: Semi-marathons...)">
+                            <Input value={interest.sentence} onChange={e => handleArrayItemChange('interests', index, 'sentence', e.target.value)} />
+                          </Field>
+                        </SubSection>
+                      ))}
+                      <AddButton onClick={() => addArrayItem('interests', newInterestTemplate)}>Ajouter un intérêt</AddButton>
+                    </EditorSection>
+                  </>
+                ) : (
+                  <>
+                     {/* --- ÉDITEUR LETTRE DE MOTIVATION --- */}
+                    <EditorSection title="En-tête">
+                      <Field label="Objet de la lettre">
+                        <Input value={editableContent?.subject || ""} onChange={(e) => handleFieldChange('subject', e.target.value)} />
                       </Field>
-                      <Field label="Description (ex: Semi-marathons...)">
-                        <Input value={interest.sentence} onChange={e => handleArrayItemChange('interests', index, 'sentence', e.target.value)} />
+                      <Field label="Formule d'appel (ex: Madame, Monsieur,)">
+                        <Input value={editableContent?.greeting || ""} onChange={(e) => handleFieldChange('greeting', e.target.value)} />
                       </Field>
-                    </SubSection>
-                  ))}
-                  <AddButton onClick={() => addArrayItem('interests', newInterestTemplate)}>Ajouter un intérêt</AddButton>
-                </EditorSection>
+                    </EditorSection>
+
+                    <EditorSection title="Contenu">
+                      <Field label="Paragraphe 1 (Accroche)">
+                        <Textarea className="min-h-[120px]" value={editableContent?.para1 || ""} onChange={(e) => handleFieldChange('para1', e.target.value)} />
+                      </Field>
+                      <Field label="Paragraphe 2 (Expérience)">
+                        <Textarea className="min-h-[120px]" value={editableContent?.para2 || ""} onChange={(e) => handleFieldChange('para2', e.target.value)} />
+                      </Field>
+                      <Field label="Paragraphe 3 (Motivation/Entreprise)">
+                        <Textarea className="min-h-[120px]" value={editableContent?.para3 || ""} onChange={(e) => handleFieldChange('para3', e.target.value)} />
+                      </Field>
+                      <Field label="Paragraphe 4 (Conclusion/Appel à l'action)">
+                         <Textarea className="min-h-[100px]" value={editableContent?.para4 || ""} onChange={(e) => handleFieldChange('para4', e.target.value)} />
+                      </Field>
+                    </EditorSection>
+
+                    <EditorSection title="Signature">
+                      <Field label="Formule de politesse & Signature">
+                        <Input value={editableContent?.signature || ""} onChange={(e) => handleFieldChange('signature', e.target.value)} />
+                      </Field>
+                    </EditorSection>
+                  </>
+                )}
+
 
               </div>
               <div className="p-4 border-t border-slate-200">
@@ -572,7 +611,7 @@ export const GeneratedDocumentView = ({
               {activeTab === 'cl' && clData ? (
                  clData.html ? (
                   <iframe
-                    key={clData.html.length}
+                    key={clData.html.length + (isSaving ? 1 : 0)}
                     srcDoc={clData.html}
                     className="w-full h-[29.7cm] border-0"
                     title="Aperçu de la Lettre"

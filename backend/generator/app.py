@@ -153,6 +153,10 @@ async def generate_cover_letter(
         
         # Ajout du contenu structuré pour l'affichage frontend
         response_data["content"] = results.get("generated_content", {})
+        
+        # Ajout du HTML si disponible (pour preview instantanée)
+        if "html_content" in results:
+            response_data["html"] = results["html_content"]
 
         return response_data
     except Exception as e:

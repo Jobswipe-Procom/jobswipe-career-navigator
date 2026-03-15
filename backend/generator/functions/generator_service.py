@@ -135,7 +135,8 @@ class JobSwipeGeneratorService:
         offer_parsed: Dict[str, Any],
         gender: str = "M",
         api_key: str = "",
-        model_name: str = "gemini-1.5-flash"
+        model_name: str = "gemini-1.5-flash",
+        manual_content: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Génère uniquement la lettre de motivation.
@@ -143,25 +144,75 @@ class JobSwipeGeneratorService:
         """
         results = {}
 
-        results['cv_parsed'] = cv_parsed
-        results['offer_parsed'] = offer_parsed
+        if manual_content:
+            # CAS 1 : Contenu manuel (édition utilisateur)
+            generated_content = manual_content
+            
+            # Récupération des infos de contact pour l'en-tête (similaire à process_cv)
+            contacts = cv_parsed.get("contacts", {})
+            contact_info = {
+                "name": cv_parsed.get("full_name", "Candidat"),
+                "city": _get_first_or_default(contacts.get("locations")),
+                "phone": _get_first_or_default(contacts.get("phones")),
+                "email": _get_first_or_default(contacts.get("emails")),
+            }
+            
+            # Génération du HTML
+            html_content = self._generate_cl_html_from_manual(generated_content, contact_info, offer_parsed)
+            
+            # Génération du PDF
+            pdf_filename = f"cover_letter_{uuid.uuid4().hex}.pdf"
+            pdf_path = os.path.join(self.output_dir, pdf_filename)
+            convert_html_to_pdf(html_content, pdf_path)
+            
+            results['paths'] = {'cl_pdf': pdf_path}
+            results['generated_content'] = generated_content
+            results['html_content'] = html_content
 
-        # 2. Génération Lettre de Motivation
-        cl_result = generate_personalized_cover_letter_docx_and_pdf(
-            offer_parsed=offer_parsed,
-            cv_parsed=cv_parsed,
-            output_dir=self.output_dir,
-            docx_filename=f"cover_letter_{uuid.uuid4().hex}.docx",
-            gender=gender,
-            api_key=api_key,
-            model_name=model_name
-        )
-        results['paths'] = {
-            'cl_docx': cl_result['docx_path'],
-            'cl_pdf': cl_result['pdf_path']
-        }
-        results['generated_content'] = cl_result['chunks']
+        else:
+            # CAS 2 : Génération par l'IA
+            results['cv_parsed'] = cv_parsed
+            results['offer_parsed'] = offer_parsed
+
+            # 2. Génération Lettre de Motivation
+            cl_result = generate_personalized_cover_letter_docx_and_pdf(
+                offer_parsed=offer_parsed,
+                cv_parsed=cv_parsed,
+                output_dir=self.output_dir,
+                docx_filename=f"cover_letter_{uuid.uuid4().hex}.docx",
+                gender=gender,
+                api_key=api_key,
+                model_name=model_name
+            )
+            results['paths'] = {
+                'cl_docx': cl_result['docx_path'],
+                'cl_pdf': cl_result['pdf_path']
+            }
+            results['generated_content'] = cl_result['chunks']
+            # On récupère le HTML généré par la fonction pour le renvoyer au front
+            results['html_content'] = cl_result.get('html_content', '')
+            
         return results
+
+    def _generate_cl_html_from_manual(self, content: Dict[str, Any], contact_info: Dict[str, Any], offer_parsed: Dict[str, Any]) -> str:
+        """Génère un HTML simple style Finance pour la lettre de motivation."""
+        # Récupération des champs
+        subject = content.get("subject", f"Candidature au poste de {offer_parsed.get('job_title', 'Poste')}")
+        greeting = content.get("greeting", "Madame, Monsieur,")
+        paras = [content.get(f"para{i}") for i in range(1, 6) if content.get(f"para{i}")]
+        signature = content.get("signature", "Cordialement,")
+        
+        # Construction du corps
+        body_paragraphs = "".join([f"<p style='margin-bottom: 12px; text-align: justify;'>{p}</p>" for p in paras])
+        
+        return f"""<!DOCTYPE html>
+        <html>
+        <body style="font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; margin: 2.5cm 2cm; color: #000;">
+            <div style="font-weight: bold; margin-bottom: 20px;">Objet : {subject}</div>
+            <div style="margin-bottom: 15px;">{greeting}</div>
+            {body_paragraphs}
+            <div style="margin-top: 30px;">{signature}</div>
+        </body></html>"""
 
     def process_scoring(
         self, 
