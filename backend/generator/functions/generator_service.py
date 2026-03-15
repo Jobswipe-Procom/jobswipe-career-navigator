@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 # Chargement des variables d'environnement
@@ -22,6 +22,12 @@ except ImportError:
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
     from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
+
+def _get_first_or_default(items: Optional[List[Any]], default: Any = "") -> Any:
+    """Helper pour récupérer le premier élément d'une liste ou une valeur par défaut."""
+    if items and isinstance(items, list) and len(items) > 0:
+        return items[0]
+    return default
 
 class JobSwipeGeneratorService:
     """
@@ -96,9 +102,9 @@ class JobSwipeGeneratorService:
         contacts = cv_parsed.get("contacts", {})
         contact_info = {
             "name": cv_parsed.get("full_name", "Candidat"),
-            "city": (contacts.get("locations") or [""])[0],
-            "phone": (contacts.get("phones") or [""])[0],
-            "email": (contacts.get("emails") or [""])[0],
+            "city": _get_first_or_default(contacts.get("locations")),
+            "phone": _get_first_or_default(contacts.get("phones")),
+            "email": _get_first_or_default(contacts.get("emails")),
             "linkedin": next((l.get("url") for l in cv_parsed.get("social_links", []) if "linkedin" in l.get("url", "").lower()), ""),
             "github": next((l.get("url") for l in cv_parsed.get("social_links", []) if "github" in l.get("url", "").lower()), ""),
             "role": generated_content.get("cv_title", "")
@@ -110,7 +116,7 @@ class JobSwipeGeneratorService:
 
         generated_content["contact_info"] = contact_info
         results['generated_content'] = generated_content
-
+        print(contact_info)
         # 3. GÉNÉRATION DU PDF
         # Appel de la fonction generate_cv_html (celle que nous avons mise en Noir & Blanc)
         html_cv = generate_cv_html(full_cv_content, contact_info)

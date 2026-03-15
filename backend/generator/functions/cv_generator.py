@@ -111,11 +111,16 @@ def _render_html_head_and_header(contact_info: Dict[str, str], role: str) -> str
     
     # Barre de contact formatée sur une ligne
     contact_parts = [
-        contact_info['email'],
-        contact_info['phone'],
-        contact_info['city'],
-        f"LinkedIn: {contact_info['linkedin']}"
+        contact_info.get('email'),
+        contact_info.get('phone'),
+        contact_info.get('city')
     ]
+    
+    if contact_info.get('linkedin'):
+        contact_parts.append(f"LinkedIn: {contact_info['linkedin']}")
+    if contact_info.get('github'):
+        contact_parts.append(f"GitHub: {contact_info['github']}")
+
     contact_line = " | ".join([html_escape(p) for p in contact_parts if p])
 
     return f"""<!DOCTYPE html>
@@ -126,7 +131,7 @@ def _render_html_head_and_header(contact_info: Dict[str, str], role: str) -> str
 </head>
 <body>
     <div class="header-container">
-        <h1>{html_escape(contact_info['name'])}</h1>
+        <h1>{html_escape(contact_info.get('name', ''))}</h1>
         <div class="contact-bar">{contact_line}</div>
         <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">{html_escape(role)}</div>
     </div>

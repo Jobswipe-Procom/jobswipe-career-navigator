@@ -156,7 +156,7 @@ export const GeneratedDocumentView = ({
     setEditableContent((prev: any) => ({
       ...prev,
       contact_info: {
-        ...(prev.contact_info || {}),
+        ...(prev?.contact_info || {}),
         [field]: value
       }
     }));
