@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
+import { OnboardingGuard } from "./components/OnboardingGuard";
 
 // Lazy load heavy pages for better code splitting
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -94,13 +95,41 @@ const App = () => {
                 <Route path="/profil" element={<ProfilePage userId={session.user.id} />} />
                 <Route path="/cv" element={<CV />} />
                 {/* Routes Jobswipe */}
-                <Route path="/jobswipe" element={<JobswipeOffers userId={session.user.id} />} />
-                <Route path="/jobswipe/offres" element={<JobswipeOffers userId={session.user.id} />} />
+                <Route
+                  path="/jobswipe"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
+                <Route
+                  path="/jobswipe/offres"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
                 {/* Routes offres (legacy - rediriger vers jobswipe) */}
-                <Route path="/offres" element={<JobswipeOffers userId={session.user.id} />} />
+                <Route
+                  path="/offres"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
                 <Route path="/offres/:id" element={<OffreDetail />} />
                 <Route path="/offres/:id/fiche" element={<OffreFiche />} />
-                <Route path="/offres/:id/score" element={<OffreScore />} />
+                <Route
+                  path="/offres/:id/score"
+                  element={
+                    <OnboardingGuard>
+                      <OffreScore />
+                    </OnboardingGuard>
+                  }
+                />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/application-dashboard" element={<ApplicationDashboard />} />
                 <Route path="/calendrier" element={<Calendrier />} />

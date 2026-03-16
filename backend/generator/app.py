@@ -95,7 +95,7 @@ def _require_gemini_key_if_needed(manual_content: Any, x_gemini_api_key: Optiona
 async def generate_cv(
     request: ApplicationRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
-    x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
+    x_gemini_model_name: str = Header("gemini-1.5-flash", alias="x-gemini-model-name")
 ):
     """
     Génère uniquement le CV optimisé (PDF).
@@ -131,7 +131,7 @@ async def generate_cv(
 async def generate_cover_letter(
     request: ApplicationRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
-    x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
+    x_gemini_model_name: str = Header("gemini-1.5-flash", alias="x-gemini-model-name")
 ):
     """
     Génère uniquement la lettre de motivation (PDF).
@@ -170,7 +170,7 @@ async def generate_cover_letter(
 async def score_application(
     request: ApplicationRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
-    x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
+    x_gemini_model_name: str = Header("gemini-1.5-flash", alias="x-gemini-model-name")
 ):
     """
     Calcule le score de compatibilité et fournit une analyse détaillée.
@@ -233,7 +233,7 @@ async def score_batch(request: BatchScoreRequest):
 async def parse_job(
     request: JobTextRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
-    x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
+    x_gemini_model_name: str = Header("gemini-1.5-flash", alias="x-gemini-model-name")
 ):
     """
     Parse un texte d'offre d'emploi brut en JSON structuré.
@@ -255,11 +255,12 @@ async def parse_cv_upload(
     file: UploadFile = File(...),
     current_profile: Optional[str] = Form(None),
     x_gemini_api_key: Optional[str] = Header(None, alias="x-gemini-api-key"),
-    x_gemini_model_name: str = Header("gemini-2.5-flash", alias="x-gemini-model-name")
+    x_gemini_model_name: str = Header("gemini-1.5-flash", alias="x-gemini-model-name")
 ):
     """
     Reçoit un fichier (PDF ou DOCX), extrait le texte et retourne le profil structuré JSON.
     """
+    model_to_use = "gemini-1.5-flash"  # On ignore totalement ce qui vient du header pour le test
     if not x_gemini_api_key or not str(x_gemini_api_key).strip():
         raise HTTPException(status_code=401, detail="Clé API manquante")
     try:
@@ -270,11 +271,13 @@ async def parse_cv_upload(
                 profile_data = json.loads(current_profile)
             except:
                 pass # Ignore if invalid JSON
-        
+
+        print(f"DEBUG: Tentative d'appel Gemini avec le modèle : {model_to_use}")
+
         result = service.parse_cv_document(
             content, file.filename,
             api_key=x_gemini_api_key.strip(),
-            model_name=x_gemini_model_name,
+            model_name=model_to_use,
             current_profile=profile_data
         )
         return result

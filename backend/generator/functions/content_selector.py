@@ -47,7 +47,7 @@ def select_all_relevant_content(
     user_data: Dict[str, Any],
     limits: Dict[str, int] = {"exp": 3, "proj": 2, "act": 3},
     api_key: str = "",
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-1.5-flash"
 ) -> Dict[str, Any]:
     """
     Analyse l'ensemble du profil et sélectionne les éléments les plus stratégiques

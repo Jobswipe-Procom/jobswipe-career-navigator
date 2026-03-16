@@ -34,7 +34,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Récupération du nom du modèle (avec une valeur par défaut si non définie)
-GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"  # ou "gemini-1.5-flash" selon votre accès
+GEMINI_MODEL_NAME = "gemini-1.5-flash"
 
 # ============================================================================
 # 2. OUTIL : extraction du JSON renvoyé par le modèle

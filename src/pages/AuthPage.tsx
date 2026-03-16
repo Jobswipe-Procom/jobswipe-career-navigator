@@ -86,6 +86,8 @@ const AuthPage = () => {
 
       // Succès - la session sera mise à jour automatiquement via onAuthStateChange
       setError(null);
+      // Redirection vers le profil pour compléter l'onboarding
+      window.location.hash = "#/profil";
     } catch (err) {
       // Gestion spécifique des erreurs de timeout
       if (err instanceof Error) {

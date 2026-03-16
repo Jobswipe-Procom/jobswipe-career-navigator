@@ -49,7 +49,7 @@ def _extract_json(output: str) -> Dict[str, Any]:
 # 3. GENERATEUR UNIQUE (ONE-SHOT)
 # ============================================================================
 
-def generate_full_cv_content(offer_parsed: Dict[str, Any], user_data: Dict[str, Any], api_key: str, model_name: str = "gemini-2.5-flash") -> Dict[str, Any]:
+def generate_full_cv_content(offer_parsed: Dict[str, Any], user_data: Dict[str, Any], api_key: str, model_name: str = "gemini-1.5-flash") -> Dict[str, Any]:
     """
     Génère l'intégralité du contenu du CV en un seul appel API pour garantir
     la cohérence, réduire la latence et optimiser les coûts.
