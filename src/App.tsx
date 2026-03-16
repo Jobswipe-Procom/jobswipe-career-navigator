@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import AuthPage from "./pages/AuthPage";
@@ -11,6 +11,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HomePage from "./pages/HomePage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 
@@ -138,8 +139,10 @@ const App = () => {
               </>
             ) : authReady && !session ? (
               <>
-                {/* Routes publiques - utilisateur non authentifié (seulement après authReady) */}
-                <Route path="*" element={<AuthPage />} />
+                {/* Landing en page d'accueil, login sur /login */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<AuthPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : null}
             </Routes>
