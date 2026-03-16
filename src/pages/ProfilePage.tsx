@@ -435,12 +435,9 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
           return;
       }
 
-      // On récupère le modèle, sinon on force une version 1.5 valide
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash";
-      
       const headers: HeadersInit = {
-        'x-gemini-api-key': geminiKey,
-        'x-gemini-model-name': geminiModel
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       console.log("Tentative d'upload sur :", buildUrl("/parse-cv-upload"));

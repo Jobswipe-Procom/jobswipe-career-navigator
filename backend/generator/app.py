@@ -259,8 +259,8 @@ async def parse_cv_upload(
 ):
     """
     Reçoit un fichier (PDF ou DOCX), extrait le texte et retourne le profil structuré JSON.
+    Utilise x_gemini_api_key et x_gemini_model_name des headers (défaut: gemini-1.5-flash).
     """
-    model_to_use = "gemini-1.5-flash-latest"  # v1 + -latest pour éviter 404
     if not x_gemini_api_key or not str(x_gemini_api_key).strip():
         raise HTTPException(status_code=401, detail="Clé API manquante")
     try:
@@ -269,15 +269,12 @@ async def parse_cv_upload(
         if current_profile:
             try:
                 profile_data = json.loads(current_profile)
-            except:
-                pass # Ignore if invalid JSON
-
-        print(f"DEBUG: Appel API v1 avec modèle {model_to_use}")
-
+            except Exception:
+                pass
         result = service.parse_cv_document(
             content, file.filename,
             api_key=x_gemini_api_key.strip(),
-            model_name=model_to_use,
+            model_name=x_gemini_model_name.strip() or "gemini-1.5-flash",
             current_profile=profile_data
         )
         return result

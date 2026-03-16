@@ -1,5 +1,5 @@
 """
-compatibility_gemini.py
+compatibility.py
 
 Use Gemini to compute a compatibility score between:
 - a parsed job offer (output of parse_job_offer_gemini)

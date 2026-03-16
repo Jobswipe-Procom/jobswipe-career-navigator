@@ -47,12 +47,13 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
     const fetchScore = async () => {
       try {
         const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-        const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
         if (!geminiKey) return;
 
-        const headers: HeadersInit = { "Content-Type": "application/json" };
-        headers["x-gemini-api-key"] = geminiKey;
-        if (geminiModel) headers["x-gemini-model-name"] = geminiModel;
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+          "x-gemini-api-key": geminiKey,
+          "x-gemini-model-name": "gemini-1.5-flash"
+        };
 
         const res = await fetch(buildUrl("/score-fast"), {
           method: "POST",
@@ -890,7 +891,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               
               try {
                   const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-                  const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
                   if (!geminiKey) {
                       toast({ variant: "destructive", description: "Clé API Gemini manquante. Configurez-la dans votre profil pour importer." });
                       return;
@@ -898,11 +898,11 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
 
                   setLoading(true);
                   toast({ description: "Analyse de l'offre importée..." });
-                  
-                  // 1. Parser l'offre via le backend
-                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-                  headers['x-gemini-api-key'] = geminiKey;
-                  if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+                  const headers: HeadersInit = {
+                    "Content-Type": "application/json",
+                    "x-gemini-api-key": geminiKey,
+                    "x-gemini-model-name": "gemini-1.5-flash"
+                  };
 
                   const res = await fetch(buildUrl("/parse-job"), {
                       method: 'POST',
