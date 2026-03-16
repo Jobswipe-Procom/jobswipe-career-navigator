@@ -92,12 +92,12 @@ const STEPS = [
 
 const FAQ_ITEMS = [
   {
-    q: "Comment fonctionne Trouve Ton Stage ?",
-    a: "Trouve Ton Stage s'inspire du fonctionnement de Tinder appliqué à la recherche de stage. Vous définissez vos critères, puis vous parcourez les offres en les faisant glisser : à gauche pour ignorer, à droite pour sauvegarder et en superlike pour postuler directement. L'expérience est intuitive, rapide et pensée pour vous faire gagner du temps.",
+    q: "Comment fonctionne JobSwipe ?",
+    a: "JobSwipe s'inspire du fonctionnement de Tinder appliqué à la recherche de stage. Vous définissez vos critères, puis vous parcourez les offres en les faisant glisser : à gauche pour ignorer, à droite pour sauvegarder et en superlike pour postuler directement. L'expérience est intuitive, rapide et pensée pour vous faire gagner du temps.",
   },
   {
     q: "Combien coûte l'abonnement ?",
-    a: "L'abonnement Trouve Ton Stage coûte 3,99€ par mois. Il donne accès aux recherches illimitées, aux swipes illimités ainsi qu'à la génération de CV et lettres de motivation par IA.",
+    a: "L'abonnement JobSwipe coûte 3,99€ par mois. Il donne accès aux recherches illimitées, aux swipes illimités ainsi qu'à la génération de CV et lettres de motivation par IA.",
   },
   {
     q: "Comment sont générés les CV et lettres de motivation ?",
@@ -194,7 +194,7 @@ export default function LandingPage() {
         <section className="border-t border-slate-100/80 bg-white/70 px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <h2 className="text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-              Trouve Ton Stage en chiffres
+              JobSwipe en chiffres
             </h2>
             <p className="mt-2 text-center text-slate-600">Rejoignez notre version Bêta</p>
             <div className="mt-12 grid gap-8 sm:grid-cols-3">
@@ -308,7 +308,7 @@ export default function LandingPage() {
               Comment ça marche ?
             </h2>
             <p className="mt-2 text-center text-slate-600">
-              Trouve ton stage en 3 étapes simples
+              JobSwipe en 3 étapes simples
             </p>
             <div className="mt-12 grid gap-8 md:grid-cols-3">
               {STEPS.map((item) => (
@@ -341,7 +341,7 @@ export default function LandingPage() {
               Questions fréquentes
             </h2>
             <p className="mt-2 text-center text-slate-600">
-              Tout ce que vous devez savoir sur Trouve Ton Stage
+              Tout ce que vous devez savoir sur JobSwipe
             </p>
             <div className="mt-12">
               <Accordion type="single" collapsible className="w-full">
