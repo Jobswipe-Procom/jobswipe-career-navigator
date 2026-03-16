@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from dotenv import load_dotenv
 from google import genai
@@ -263,11 +263,17 @@ def score_profile_with_gemini(
     """
     High-level: prend l'offre parsée + le CV parsé,
     appelle Gemini pour obtenir score + conseils.
+
+    Cette fonction est conçue pour NE JAMAIS lever d'erreur de parsing :
+    en cas de problème, elle renvoie un JSON par défaut avec un score à 0.
     """
-    prompt = build_compat_prompt(offer_parsed, cv_parsed)
-    raw_output = generate_with_gemini(prompt, api_key, model_name)
-    parsed_json = extract_json_from_output(raw_output)
-    return parsed_json
+    try:
+        prompt = build_compat_prompt(offer_parsed, cv_parsed)
+        raw_output = generate_with_gemini(prompt, api_key, model_name)
+        return extract_json_from_output(raw_output)
+    except Exception:
+        # Fallback ultime : laisse extract_json_from_output gérer le défaut
+        return extract_json_from_output("")
 
 
 # ============================================================================
