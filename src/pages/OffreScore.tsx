@@ -11,6 +11,7 @@ import { Profile } from "@/types/profile";
 import { Loader2, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Lightbulb, Briefcase, GraduationCap, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SEOHead } from "@/components/seo";
+import { buildUrl } from "@/lib/apiClient";
 
 const OffreScore = () => {
   const { id } = useParams<{ id: string }>();
@@ -128,7 +129,6 @@ const OffreScore = () => {
       const offerData = formatJobForBackend(jobData!);
 
       // 4. Appeler l'API de scoring
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
@@ -141,7 +141,7 @@ const OffreScore = () => {
       headers['x-gemini-api-key'] = geminiKey;
       if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-      const response = await fetch(`${API_URL}/score-application`, {
+      const response = await fetch(buildUrl("/score-application"), {
         method: 'POST',
         headers,
         body: JSON.stringify({ cv_data: cvData, offer_data: offerData, gender: (profile as any)?.gender || "M" })

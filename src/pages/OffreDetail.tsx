@@ -16,6 +16,7 @@ import { Loader2, ExternalLink, FileText, TrendingUp, Heart, Mail, Sparkles, Pen
 import { useToast } from "@/hooks/use-toast";
 import { GeneratedDocumentView } from "@/components/GeneratedDocumentView";
 import { SEOHead } from "@/components/seo";
+import { buildUrl } from "@/lib/apiClient";
 
 const OffreDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -248,7 +249,6 @@ const OffreDetail = () => {
         // Utiliser les données brutes si disponibles pour avoir les hard_skills
         const offerData = { ...job, ...(job.raw || {}) };
         
-        const API_URL = import.meta.env.VITE_API_URL;
         const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
         const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
         if (!geminiKey) return;
@@ -257,7 +257,7 @@ const OffreDetail = () => {
         headers['x-gemini-api-key'] = geminiKey;
         if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-        const res = await fetch(`${API_URL}/score-fast`, {
+        const res = await fetch(buildUrl("/score-fast"), {
           method: 'POST',
           headers,
           body: JSON.stringify({ cv_data: cvData, offer_data: offerData })
@@ -333,7 +333,6 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
@@ -351,13 +350,16 @@ const OffreDetail = () => {
       // --- ÉTAPE 1 : CV (si pas déjà généré) ---
       if (!cvResult) {
         toast({ description: "1/2 Génération du CV optimisé..." });
-        const resCV = await fetch(`${API_URL}/generate-cv`, {
+        const resCV = await fetch(buildUrl("/generate-cv"), {
           method: 'POST',
           headers,
           body: JSON.stringify({ cv_data: cvData, offer_data: offerData, gender: (userProfile as any)?.gender || "M" })
         });
 
-        if (!resCV.ok) throw new Error("Erreur lors de la génération du CV");
+        if (!resCV.ok) {
+          toast({ variant: "destructive", description: `Erreur backend CV (${resCV.status})` });
+          throw new Error(`Erreur lors de la génération du CV (${resCV.status})`);
+        }
         const dataCV = await resCV.json();
         
         cvResult = dataCV.files?.cv_pdf 
@@ -368,13 +370,16 @@ const OffreDetail = () => {
       // --- ÉTAPE 2 : Lettre de motivation (si pas déjà générée) ---
       if (!clResult) {
         toast({ description: "2/2 Génération de la lettre de motivation..." });
-        const resCL = await fetch(`${API_URL}/generate-cover-letter`, {
+        const resCL = await fetch(buildUrl("/generate-cover-letter"), {
           method: 'POST',
           headers,
           body: JSON.stringify({ cv_data: cvData, offer_data: offerData, gender: (userProfile as any)?.gender || "M" })
         });
 
-        if (!resCL.ok) throw new Error("Erreur lors de la génération de la lettre");
+        if (!resCL.ok) {
+          toast({ variant: "destructive", description: `Erreur backend lettre (${resCL.status})` });
+          throw new Error(`Erreur lors de la génération de la lettre (${resCL.status})`);
+        }
         const dataCL = await resCL.json();
         
         clResult = dataCL.files?.cl_pdf 
@@ -427,8 +432,6 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
@@ -440,15 +443,15 @@ const OffreDetail = () => {
       headers['x-gemini-api-key'] = geminiKey;
       if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-      const response = await fetch(`${API_URL}/generate-cv`, {
+      const response = await fetch(buildUrl("/generate-cv"), {
         method: 'POST',
         headers,
         body: JSON.stringify({ cv_data: cvData, offer_data: offerData, gender: (userProfile as any)?.gender || "M" })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de la génération du CV");
+        toast({ variant: "destructive", description: `Erreur backend CV (${response.status})` });
+        throw new Error(`Erreur lors de la génération du CV (${response.status})`);
       }
 
       const data = await response.json();
@@ -502,8 +505,6 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
@@ -515,15 +516,15 @@ const OffreDetail = () => {
       headers['x-gemini-api-key'] = geminiKey;
       if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-      const response = await fetch(`${API_URL}/generate-cover-letter`, {
+      const response = await fetch(buildUrl("/generate-cover-letter"), {
         method: 'POST',
         headers,
         body: JSON.stringify({ cv_data: cvData, offer_data: offerData, gender: (userProfile as any)?.gender || "M" })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de la génération de la lettre");
+        toast({ variant: "destructive", description: `Erreur backend lettre (${response.status})` });
+        throw new Error(`Erreur lors de la génération de la lettre (${response.status})`);
       }
 
       const data = await response.json();
@@ -561,7 +562,6 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       
@@ -576,7 +576,7 @@ const OffreDetail = () => {
 
       const endpoint = docType === 'cv' ? '/generate-cv' : '/generate-cover-letter';
       
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(buildUrl(endpoint), {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
@@ -589,8 +589,8 @@ const OffreDetail = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de la mise à jour du document");
+        toast({ variant: "destructive", description: `Erreur backend (${response.status})` });
+        throw new Error(`Erreur lors de la mise à jour du document (${response.status})`);
       }
 
       const data = await response.json();
@@ -641,7 +641,6 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const API_URL = import.meta.env.VITE_API_URL;
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
       const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       
@@ -654,7 +653,7 @@ const OffreDetail = () => {
       headers['x-gemini-api-key'] = geminiKey;
       if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-      const response = await fetch(`${API_URL}/generate-cv`, {
+      const response = await fetch(buildUrl("/generate-cv"), {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
@@ -666,8 +665,8 @@ const OffreDetail = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de la régénération du CV");
+        toast({ variant: "destructive", description: `Erreur backend CV (${response.status})` });
+        throw new Error(`Erreur lors de la régénération du CV (${response.status})`);
       }
 
       const data = await response.json();

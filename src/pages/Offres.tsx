@@ -13,6 +13,7 @@ import { JobSwipeScreen } from "@/components/swipe";
 import { OfferDetailModal } from "@/components/OfferDetailModal";
 import { useToast } from "@/hooks/use-toast";
 import { SEOHead } from "@/components/seo";
+import { buildUrl } from "@/lib/apiClient";
 
 interface OffresProps {
   userId: string;
@@ -45,7 +46,6 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
 
     const fetchScore = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL;
         const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
         const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
         if (!geminiKey) return;
@@ -54,7 +54,7 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
         headers["x-gemini-api-key"] = geminiKey;
         if (geminiModel) headers["x-gemini-model-name"] = geminiModel;
 
-        const res = await fetch(`${API_URL}/score-fast`, {
+        const res = await fetch(buildUrl("/score-fast"), {
           method: "POST",
           headers,
           // On fusionne job et job.raw pour s'assurer d'avoir les hard_skills pour le scoring
@@ -444,7 +444,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       
       try {
         console.log("🧠 [JobSwipe] Appel API /score-batch pour calculer la compatibilité...");
-        const API_URL = import.meta.env.VITE_API_URL;
         const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
         if (geminiKey) headers['x-gemini-api-key'] = geminiKey;
@@ -457,7 +456,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
         }));
         console.log("📤 [JobSwipe] Payload envoyé à /score-batch :", { cv_data: userCvData, offers: offersPayload });
 
-        const res = await fetch(`${API_URL}/score-batch`, {
+        const res = await fetch(buildUrl("/score-batch"), {
           method: 'POST',
           headers,
           body: JSON.stringify({ cv_data: userCvData, offers: offersPayload })
@@ -901,12 +900,11 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   toast({ description: "Analyse de l'offre importée..." });
                   
                   // 1. Parser l'offre via le backend
-                  const API_URL = import.meta.env.VITE_API_URL;
                   const headers: HeadersInit = { 'Content-Type': 'application/json' };
                   headers['x-gemini-api-key'] = geminiKey;
                   if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
 
-                  const res = await fetch(`${API_URL}/parse-job`, {
+                  const res = await fetch(buildUrl("/parse-job"), {
                       method: 'POST',
                       headers,
                       body: JSON.stringify({ text: offerData.description })
@@ -948,7 +946,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   // --- CALCUL DU SCORE (Batch Match Offers via /score-fast) ---
                   if (userCvData) {
                       try {
-                          const scoreRes = await fetch(`${API_URL}/score-fast`, {
+                          const scoreRes = await fetch(buildUrl("/score-fast"), {
                               method: 'POST',
                               headers,
                               body: JSON.stringify({ 
