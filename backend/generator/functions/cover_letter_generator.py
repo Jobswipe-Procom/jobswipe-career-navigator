@@ -42,6 +42,7 @@ import datetime
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -275,7 +276,7 @@ def generate_letter_structure_with_gemini(
     date_hint = date_override or french_date()
     gender_label = "masculin" if gender.upper() == "M" else "féminin"
     
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
 
     # 2. Appel 1 : Header & Meta
     prompt_header = build_header_prompt(offer_parsed, cv_parsed, city_hint, date_hint, reference)

@@ -228,7 +228,7 @@ def generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
     """
     Call Gemini with the given prompt and return the raw text output.
     """
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,

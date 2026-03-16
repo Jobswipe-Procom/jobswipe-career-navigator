@@ -4,6 +4,7 @@ import re
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ load_dotenv()
 # ============================================================================
 
 def _generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
         contents=prompt
