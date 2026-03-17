@@ -14,6 +14,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from functions.generator_service import JobSwipeGeneratorService
 from functions.matcher_engine import batch_match_offers
+try:
+    from functions.gemini_config import GEMINI_MODEL
+except ImportError:
+    from gemini_config import GEMINI_MODEL
 
 app = FastAPI(title="JobSwipe Generator API", version="1.0")
 
@@ -259,7 +263,8 @@ async def parse_cv_upload(
 ):
     """
     Reçoit un fichier (PDF ou DOCX), extrait le texte et retourne le profil structuré JSON.
-    Utilise x_gemini_api_key et x_gemini_model_name des headers (défaut: gemini-1.5-flash).
+    Utilise x_gemini_api_key du header et le modèle Gemini défini côté backend
+    (variable d'environnement GEMINI_MODEL / GEMINI_MODEL_NAME ou valeur par défaut supportée).
     """
     if not x_gemini_api_key or not str(x_gemini_api_key).strip():
         raise HTTPException(status_code=401, detail="Clé API manquante")
@@ -271,16 +276,25 @@ async def parse_cv_upload(
                 profile_data = json.loads(current_profile)
             except Exception:
                 pass
+
+        model_to_use = GEMINI_MODEL
+        print(f"[parse-cv-upload] DEBUG: Appel Gemini pour parsing CV avec le modèle: {model_to_use}")
+
         result = service.parse_cv_document(
             content, file.filename,
             api_key=x_gemini_api_key.strip(),
-            model_name=x_gemini_model_name.strip() or "gemini-1.5-flash",
+            model_name=model_to_use,
             current_profile=profile_data
         )
         return result
     except Exception as e:
-        print(f"ERREUR dans /parse-cv-upload : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur lors de l'analyse du CV : {str(e)}")
+        # Log détaillé pour le debug
+        print(f"[parse-cv-upload] ERREUR lors de l'appel Gemini ou du parsing CV: {repr(e)}")
+        # Erreur HTTP explicite pour le frontend
+        raise HTTPException(
+            status_code=502,
+            detail=f"Echec de l'appel Gemini pour le parsing du CV: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn

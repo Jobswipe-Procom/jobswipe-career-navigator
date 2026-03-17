@@ -26,6 +26,11 @@ from google.genai import types
 
 load_dotenv()
 
+try:
+    from .gemini_config import GEMINI_MODEL, get_gemini_model
+except ImportError:
+    from gemini_config import GEMINI_MODEL, get_gemini_model
+
 # ============================================================================
 # 1. CONFIG GEMINI
 # ============================================================================
@@ -33,8 +38,8 @@ load_dotenv()
 # Récupération de la clé API depuis les variables d'environnement
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Récupération du nom du modèle (avec une valeur par défaut si non définie)
-GEMINI_MODEL_NAME = "gemini-1.5-flash"
+# Modèle Gemini centralisé (env GEMINI_MODEL / GEMINI_MODEL_NAME, sinon défaut)
+GEMINI_MODEL_NAME = GEMINI_MODEL
 
 # ============================================================================
 # 2. OUTIL : extraction du JSON renvoyé par le modèle
@@ -221,7 +226,7 @@ def generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
     """
     Call Gemini with the given prompt and return the raw text output.
     """
-    print(f"DEBUG: Appel API v1 avec modèle {model_name}")
+    print(f"[cv_parsing] DEBUG: Appel API v1 avec le modèle: {model_name}")
     client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
@@ -287,7 +292,7 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
     return text
 
 
-def parse_cv_with_gemini(cv_text: str, api_key: str, model_name: str = "gemini-1.5-flash", current_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def parse_cv_with_gemini(cv_text: str, api_key: str, model_name: str = GEMINI_MODEL_NAME, current_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     High-level function: takes raw CV text, sends it to Gemini,
     parses the JSON, and returns a Python dict.
