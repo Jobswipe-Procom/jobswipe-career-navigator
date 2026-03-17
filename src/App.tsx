@@ -134,14 +134,19 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/application-dashboard" element={<ApplicationDashboard />} />
                 <Route path="/calendrier" element={<Calendrier />} />
+                {/* Alias de routes d'auth quand l'utilisateur est déjà connecté */}
+                <Route path="/auth" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </>
             ) : authReady && !session ? (
               <>
-                {/* Landing en page d'accueil, login sur /login */}
+                {/* Landing en page d'accueil, /auth comme route principale d'authentification */}
                 <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<AuthPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                {/* Alias /login -> /auth pour compatibilité avec les CTA */}
+                <Route path="/login" element={<Navigate to="/auth" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : null}

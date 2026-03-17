@@ -142,7 +142,7 @@ export default function LandingPage() {
             variant="outline"
             size="sm"
             className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/auth")}
           >
             Connexion
           </Button>
@@ -169,7 +169,7 @@ export default function LandingPage() {
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-blue-500 to-violet-500 text-white shadow-md hover:from-blue-600 hover:to-violet-600"
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/auth")}
                   >
                     Commencer gratuitement
                     <ChevronRight className="h-4 w-4" />
@@ -258,7 +258,7 @@ export default function LandingPage() {
                   <Button
                     className="w-full bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:from-blue-600 hover:to-violet-600"
                     size="lg"
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/auth")}
                   >
                     S'abonner maintenant
                   </Button>
@@ -376,7 +376,7 @@ export default function LandingPage() {
               </Link>
               <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/auth")}
                 className="text-slate-600 hover:text-slate-900"
               >
                 Connexion
