@@ -1,5 +1,5 @@
 """
-compatibility.py
+compatibility_gemini.py
 
 Use Gemini to compute a compatibility score between:
 - a parsed job offer (output of parse_job_offer_gemini)
@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import json
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from dotenv import load_dotenv
 from google import genai
@@ -34,35 +34,13 @@ google_api_key = os.getenv("GEMINI_API_KEY")
 
 def extract_json_from_output(output: str) -> Dict[str, Any]:
     """
-    Extract a JSON object from the model's raw text output in a robust way.
+    Extract a JSON object from the model's raw text output.
 
-    En cas d'échec irrécupérable, on renvoie un JSON par défaut avec score 0
-    pour éviter de faire tomber tout le backend.
+    - If the output is already pure JSON, parse directly.
+    - Otherwise, find the first {...} block.
     """
-    output = (output or "").strip()
-
-    # JSON par défaut de secours
-    default_result: Dict[str, Any] = {
-        "overall_score": 0,
-        "scores": {
-            "skills_match": 0,
-            "experience_match": 0,
-            "education_match": 0,
-            "language_match": 0,
-        },
-        "summary": "Analyse de compatibilité indisponible (erreur de parsing JSON).",
-        "key_strengths": [],
-        "key_gaps": [],
-        "missing_hard_skills": [],
-        "missing_soft_skills": [],
-        "recommended_improvements": [],
-        "recommended_projects_or_experiences": [],
-        "recommended_courses_or_certifications": [],
-    }
-
-    if not output:
-        return default_result
-
+    output = output.strip()
+    
     # 1. Gestion des blocs Markdown (```json ... ```)
     if "```" in output:
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", output, flags=re.DOTALL)
@@ -72,59 +50,47 @@ def extract_json_from_output(output: str) -> Dict[str, Any]:
             output = re.sub(r"^```[a-zA-Z0-9]*\s*", "", output)
             output = re.sub(r"\s*```$", "", output)
 
-    # 2. Extraction du bloc JSON en cherchant le premier '{' et le dernier '}'
-    start = output.find("{")
-    end = output.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        json_str = output[start : end + 1]
+    # 2. Extraction du bloc JSON
+    match = re.search(r"\{.*\}", output, flags=re.DOTALL)
+    if match:
+        json_str = match.group(0)
     else:
-        # Si on ne trouve rien de cohérent, fallback direct
-        return default_result
+        json_str = output
 
-    def _try_parse(s: str) -> Dict[str, Any] | None:
-        try:
-            return json.loads(s)
-        except json.JSONDecodeError:
-            return None
-
-    # 3. Première tentative de parsing direct
-    parsed = _try_parse(json_str)
-    if parsed is not None:
-        return parsed
-
-    # 4. Tentative de réparation du JSON
+    # 3. Parsing avec tentative de nettoyage des commentaires
     try:
-        # 4.1 Suppression des caractères de contrôle non imprimables
-        json_clean = re.sub(r"[\x00-\x1F\x7F]", "", json_str)
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # Tentative de réparation du JSON
+        # 1. Suppression des commentaires // (sauf si dans une URL http://)
+        json_str = re.sub(r"(?<!:)\/\/.*", "", json_str)
+        # 2. Suppression des virgules traînantes (trailing commas)
+        json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
+        
+        # 3. Ajout des virgules manquantes entre un bloc fermant et une clé suivante
+        # Ex: } "summary": -> }, "summary":
+        json_str = re.sub(r"([\}\]])\s*(\"[^\"]+\"\s*:)", r"\1,\2", json_str)
 
-        # 4.2 Suppression des commentaires // (sauf si dans une URL http://)
-        json_clean = re.sub(r"(?<!:)\/\/.*", "", json_clean)
+        # 4. Ajout des virgules manquantes après une valeur simple (nombre, bool, null) et une clé
+        # Ex: 10 "scores": -> 10, "scores":
+        json_str = re.sub(r"([0-9]+|true|false|null)\s+(\"[^\"]+\"\s*:)", r"\1,\2", json_str)
+        
+        # 5. Ajout des virgules manquantes après une string et une clé
+        # Ex: "val" "key": -> "val", "key":
+        json_str = re.sub(r"(\")\s+(\"[^\"]+\"\s*:)", r"\1,\2", json_str)
 
-        # 4.3 Suppression des virgules traînantes (trailing commas)
-        json_clean = re.sub(r",\s*([\]}])", r"\1", json_clean)
+        # 6. Nettoyage des pourcentages ou fractions dans les valeurs numériques (ex: 20% -> 20)
+        # Gemini a tendance à mettre "match": 20%
+        json_str = re.sub(r":\s*(\d+)\s*[%]", r": \1", json_str)
+        json_str = re.sub(r":\s*(\d+)\s*/\s*100", r": \1", json_str)
 
-        # 4.4 Ajout des virgules manquantes entre un bloc fermant et une clé suivante
-        json_clean = re.sub(r"([\}\]])\s*(\"[^\"]+\"\s*:)", r"\1,\2", json_clean)
-
-        # 4.5 Ajout des virgules manquantes après une valeur simple (nombre, bool, null) et une clé
-        json_clean = re.sub(r"([0-9]+|true|false|null)\s+(\"[^\"]+\"\s*:)", r"\1,\2", json_clean)
-
-        # 4.6 Ajout des virgules manquantes après une string et une clé
-        json_clean = re.sub(r"(\")\s+(\"[^\"]+\"\s*:)", r"\1,\2", json_clean)
-
-        # 4.7 Nettoyage des pourcentages ou fractions dans les valeurs numériques (ex: 20% -> 20)
-        json_clean = re.sub(r":\s*(\d+)\s*[%]", r": \1", json_clean)
-        json_clean = re.sub(r":\s*(\d+)\s*/\s*100", r": \1", json_clean)
-
-        repaired = _try_parse(json_clean)
-        if repaired is not None:
-            return repaired
-    except Exception:
-        # Toute erreur dans la phase de réparation mène au fallback
-        return default_result
-
-    # 5. Fallback final : on ne lève plus d'exception, on renvoie le JSON par défaut
-    return default_result
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Erreur de parsing JSON : {e}\n"
+                f"Sortie brute : {output[:500]}..."
+            )
 
 
 # ============================================================================
@@ -147,8 +113,6 @@ parsed JSON representations, and return a detailed compatibility analysis.
 
 You MUST return STRICTLY a valid JSON object, with NO explanation, NO text
 before, and NO text after.
-You MUST NOT use markdown at all (no ```json, no ```).
-The response MUST be ONLY one valid JSON object.
 
 ====================
 JOB OFFER (parsed JSON)
@@ -228,7 +192,7 @@ def generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
     """
     Call Gemini with the given prompt and return the raw text output.
     """
-    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
+    client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,
@@ -263,17 +227,11 @@ def score_profile_with_gemini(
     """
     High-level: prend l'offre parsée + le CV parsé,
     appelle Gemini pour obtenir score + conseils.
-
-    Cette fonction est conçue pour NE JAMAIS lever d'erreur de parsing :
-    en cas de problème, elle renvoie un JSON par défaut avec un score à 0.
     """
-    try:
-        prompt = build_compat_prompt(offer_parsed, cv_parsed)
-        raw_output = generate_with_gemini(prompt, api_key, model_name)
-        return extract_json_from_output(raw_output)
-    except Exception:
-        # Fallback ultime : laisse extract_json_from_output gérer le défaut
-        return extract_json_from_output("")
+    prompt = build_compat_prompt(offer_parsed, cv_parsed)
+    raw_output = generate_with_gemini(prompt, api_key, model_name)
+    parsed_json = extract_json_from_output(raw_output)
+    return parsed_json
 
 
 # ============================================================================
@@ -344,5 +302,5 @@ if __name__ == "__main__":
     }
 
     print("[INFO] Scoring compatibility with Gemini...")
-    result = score_profile_with_gemini(offer_demo, cv_demo,api_key=google_api_key, model_name="gemini-1.5-flash")
+    result = score_profile_with_gemini(offer_demo, cv_demo,api_key=google_api_key, model_name="gemini-2.5-flash-lite")
     print(json.dumps(result, indent=2, ensure_ascii=False))
