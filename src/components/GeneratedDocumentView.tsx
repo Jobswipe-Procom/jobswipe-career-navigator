@@ -366,7 +366,7 @@ export const GeneratedDocumentView = ({
               className={`flex items-center p-3 rounded-xl transition-all text-left ${activeTab === 'cv' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'hover:bg-slate-50 text-slate-600'}`}
             >
               <FileText className={`w-5 h-5 mr-3 ${activeTab === 'cv' ? 'text-indigo-600' : 'text-slate-400'}`} />
-              <div className="text-sm font-semibold">CV Style Finance</div>
+              <div className="text-sm font-semibold">CV</div>
             </button>
           )}
           {clData && (

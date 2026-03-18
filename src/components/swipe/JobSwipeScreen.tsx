@@ -11,7 +11,6 @@ interface JobSwipeScreenProps {
   formatSalary: (job: Job) => string | null;
   getJobDescription: (job: Job) => string;
   disabled?: boolean;
-  score?: number | null;
 }
 
 /**
@@ -28,30 +27,12 @@ export const JobSwipeScreen = ({
   formatSalary,
   getJobDescription,
   disabled = false,
-  score,
 }: JobSwipeScreenProps) => {
-  
-  // Calcul de la couleur dynamique (Rouge 0 -> Vert 120)
-  const hue = score !== undefined && score !== null ? Math.min(120, Math.max(0, (score / 100) * 120)) : 0;
-  const scoreStyle = score !== undefined && score !== null ? {
-    backgroundColor: `hsl(${hue}, 85%, 96%)`,
-    color: `hsl(${hue}, 90%, 35%)`,
-    borderColor: `hsl(${hue}, 80%, 80%)`,
-  } : {};
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col w-full">
       {/* Carte swipeable */}
-      <div className="flex-1 flex items-center justify-center px-4 py-2 relative">
-        {score !== undefined && score !== null && (
-          <div 
-            className="absolute top-8 left-8 z-20 px-3 py-1 rounded-full border font-bold text-sm shadow-sm flex items-center gap-1 animate-in fade-in zoom-in duration-300"
-            style={scoreStyle}
-          >
-            <span className="text-xs font-normal opacity-80">Match</span>
-            {score}%
-          </div>
-        )}
+      <div className="flex items-center justify-center px-4 py-0 relative">
         <JobCard
           offer={offer}
           onSwipeRight={onSwipeRight}
