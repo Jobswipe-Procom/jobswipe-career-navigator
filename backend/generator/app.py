@@ -188,45 +188,6 @@ async def score_application(request: ApplicationRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/score-fast")
-async def score_fast(request: ApplicationRequest):
-    """
-    Calcule un score rapide (NLP) pour l'affichage en liste.
-    Retourne un entier entre 0 et 100.
-    """
-    try:
-        # Utilisation de batch_match_offers pour un seul élément pour garantir la cohérence
-        offer_id = "current"
-        offers_dict = {offer_id: request.offer_data}
-        scores = batch_match_offers(request.cv_data, offers_dict)
-        score = scores.get(offer_id, 0)
-        return {"score": score}
-    except Exception as e:
-        print(f"ERREUR 500 dans /score-fast : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/score-batch")
-async def score_batch(request: BatchScoreRequest):
-    """
-    Calcule les scores pour une liste d'offres (NLP).
-    Retourne un dictionnaire {offer_id: score}.
-    """
-    try:
-        scores = {}
-        # Conversion de la liste en dictionnaire pour le moteur NLP {id: data}
-        offers_dict = {
-            offer.get("id"): offer 
-            for offer in request.offers 
-            if offer.get("id")
-        }
-        
-        # Utilisation du moteur NLP (spaCy) pour le matching sémantique
-        scores = batch_match_offers(request.cv_data, offers_dict)
-        
-        return {"scores": scores}
-    except Exception as e:
-        print(f"ERREUR 500 dans /score-batch : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/parse-job")
 async def parse_job(request: JobTextRequest):

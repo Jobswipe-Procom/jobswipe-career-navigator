@@ -1271,7 +1271,7 @@ const OffreDetail = () => {
                     className="bg-secondary hover:bg-secondary/90 w-full"
                   >
                     <TrendingUp className="w-4 h-4 mr-2" />
-                    Score
+                    Analyse du CV (IA)
                   </PrimaryButton>
                   
                   {generatedDocs?.cv ? (
