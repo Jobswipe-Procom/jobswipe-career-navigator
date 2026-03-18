@@ -53,8 +53,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [geminiKey, setGeminiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-1.5-flash");
 
   // Récupérer l'utilisateur authentifié depuis Supabase
   useEffect(() => {
@@ -184,12 +182,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       } as unknown as Profile;
 
       setProfile(loadedProfile);
-
-      const storedKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (storedKey) setGeminiKey(storedKey);
-
-      const storedModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
-      if (storedModel) setGeminiModel(storedModel);
 
       // Conversion et sauvegarde pour les anciennes pages
       const userProfileForStorage: UserProfile = {
@@ -340,18 +332,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
       setSaveStatus("success");
 
-      if (geminiKey) {
-        localStorage.setItem("JOBSWIPE_GEMINI_KEY", geminiKey);
-      } else {
-        localStorage.removeItem("JOBSWIPE_GEMINI_KEY");
-      }
-
-      if (geminiModel) {
-        localStorage.setItem("JOBSWIPE_GEMINI_MODEL", geminiModel);
-      } else {
-        localStorage.removeItem("JOBSWIPE_GEMINI_MODEL");
-      }
-
       // Mettre à jour également le profil simplifié dans le localStorage
       const userProfileForStorage: UserProfile = {
         firstName: profile.first_name || '',
@@ -423,28 +403,12 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
         formData.append("current_profile", JSON.stringify(profile));
       }
 
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      
-      if (!geminiKey) {
-          toast({ 
-            variant: "destructive", 
-            description: "Clé API Gemini manquante. Veuillez la configurer en bas de page." 
-          });
-          if (fileInputRef.current) fileInputRef.current.value = "";
-          setImporting(false);
-          return;
-      }
-
-      const headers: HeadersInit = {
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
-      };
+      const API_URL = import.meta.env.VITE_API_URL;
 
       console.log("Tentative d'upload sur :", buildUrl("/parse-cv-upload"));
 
       const response = await fetch(buildUrl("/parse-cv-upload"), {
         method: "POST",
-        headers,
         body: formData,
       });
 
@@ -514,7 +478,11 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       
     } catch (err) {
       console.error("Erreur import CV:", err);
-      toast({ variant: "destructive", description: "Impossible d'analyser le CV." });
+      let errorMessage = "Impossible d'analyser le CV.";
+      if (err instanceof Error && err.message.includes("GEMINI_API_KEY")) {
+        errorMessage = "La clé API Gemini n'est pas configurée sur le serveur.";
+      }
+      toast({ variant: "destructive", description: errorMessage });
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -768,46 +736,8 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
         {/* Section Paramètres du compte / Zone de danger */}
         <div className="mt-8 pt-8 border-t border-gray-200">
-          <CollapsibleSection title="Paramètres du compte" defaultOpen={false}>
+          <CollapsibleSection title="Zone de danger" defaultOpen={false}>
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                  <Key className="w-4 h-4" />
-                  Clé API Gemini
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Renseignez votre clé API Gemini pour activer les fonctionnalités d'IA avancées (Analyse de timing, Feedback, etc.).
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="geminiKey">Clé API</Label>
-                  <Input
-                    id="geminiKey"
-                    type="password"
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder="AIzaSy..."
-                    className="bg-white"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Votre clé est stockée localement dans votre navigateur.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="geminiModel">Modèle Gemini (Optionnel)</Label>
-                  <Input
-                    id="geminiModel"
-                    type="text"
-                    value={geminiModel}
-                    onChange={(e) => setGeminiModel(e.target.value)}
-                    placeholder="ex: gemini-1.5-flash"
-                    className="bg-white"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Par défaut: gemini-1.5-flash
-                  </p>
-                </div>
-              </div>
-
               <div className="p-4 rounded-2xl bg-red-50 border border-red-200">
                 <h3 className="font-semibold text-red-800 mb-2">Zone de danger</h3>
                 <p className="text-sm text-red-700 mb-4">

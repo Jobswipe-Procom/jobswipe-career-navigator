@@ -46,14 +46,7 @@ const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
 
     const fetchScore = async () => {
       try {
-        const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-        if (!geminiKey) return;
-
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-          "x-gemini-api-key": geminiKey,
-          "x-gemini-model-name": "gemini-1.5-flash"
-        };
+        const headers: HeadersInit = { "Content-Type": "application/json" };
 
         const res = await fetch(buildUrl("/score-fast"), {
           method: "POST",
@@ -445,9 +438,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       
       try {
         console.log("🧠 [JobSwipe] Appel API /score-batch pour calculer la compatibilité...");
-        const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (geminiKey) headers['x-gemini-api-key'] = geminiKey;
 
         // Préparation des données pour le batch scoring (Titre + Description uniquement pour NLP)
         const offersPayload = unswipedJobs.map(j => ({
@@ -890,19 +881,11 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               
               
               try {
-                  const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-                  if (!geminiKey) {
-                      toast({ variant: "destructive", description: "Clé API Gemini manquante. Configurez-la dans votre profil pour importer." });
-                      return;
-                  }
-
                   setLoading(true);
                   toast({ description: "Analyse de l'offre importée..." });
-                  const headers: HeadersInit = {
-                    "Content-Type": "application/json",
-                    "x-gemini-api-key": geminiKey,
-                    "x-gemini-model-name": "gemini-1.5-flash"
-                  };
+                  
+                  // 1. Parser l'offre via le backend
+                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
 
                   const res = await fetch(buildUrl("/parse-job"), {
                       method: 'POST',
@@ -911,6 +894,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   });
                   
                   if (!res.ok) {
+                      const errorText = await res.text();
+                      if (errorText.includes("GEMINI_API_KEY")) {
+                          throw new Error("La clé API Gemini n'est pas configurée sur le serveur.");
+                      }
                       if (res.status === 404) {
                           throw new Error("Le serveur backend ne connaît pas la route /parse-job. Veuillez le redémarrer pour prendre en compte les modifications.");
                       }
@@ -976,7 +963,11 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   
               } catch (e) {
                   console.error("Erreur lors de l'importation :", e);
-                  toast({ variant: "destructive", description: "Erreur lors de l'importation de l'offre." });
+                  let errorMessage = "Erreur lors de l'importation de l'offre.";
+                  if (e instanceof Error) {
+                    errorMessage = e.message;
+                  }
+                  toast({ variant: "destructive", description: errorMessage });
               } finally {
                   setLoading(false);
               }
