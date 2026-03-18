@@ -895,9 +895,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                   
                   if (!res.ok) {
                       const errorText = await res.text();
-                      if (errorText.includes("GEMINI_API_KEY")) {
-                          throw new Error("La clé API Gemini n'est pas configurée sur le serveur.");
-                      }
                       if (res.status === 404) {
                           throw new Error("Le serveur backend ne connaît pas la route /parse-job. Veuillez le redémarrer pour prendre en compte les modifications.");
                       }

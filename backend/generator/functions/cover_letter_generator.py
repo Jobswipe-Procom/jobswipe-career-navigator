@@ -54,6 +54,12 @@ load_dotenv()
 # 1. CONFIG GEMINI
 # ============================================================================
 
+# Récupération de la clé API depuis les variables d'environnement
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Récupération du nom du modèle (avec une valeur par défaut si non définie)
+GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"
+
 try:
     from xhtml2pdf import pisa
 except ImportError:
@@ -268,7 +274,7 @@ def generate_letter_structure_with_gemini(
     city_override: Optional[str] = None,
     date_override: Optional[str] = None,
     api_key: str = "",
-    model_name: str = "gemini-1.5-flash"
+    model_name: str = "gemini-2.5-flash-lite"
 ) -> Dict[str, Any]:
     # 1. Préparation des indices
     contact = pick_contact_info(cv_parsed)
@@ -276,7 +282,7 @@ def generate_letter_structure_with_gemini(
     date_hint = date_override or french_date()
     gender_label = "masculin" if gender.upper() == "M" else "féminin"
     
-    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
+    client = genai.Client(api_key=api_key)
 
     # 2. Appel 1 : Header & Meta
     prompt_header = build_header_prompt(offer_parsed, cv_parsed, city_hint, date_hint, reference)
@@ -350,24 +356,30 @@ def build_cover_letter_html_from_chunks(chunks: Dict[str, Any]) -> str:
 
     header = chunks.get("header_blocks", {}) or {}
     company = chunks.get("company_blocks", {}) or {}
-    header = chunks.get("header_blocks") or {}
-    company = chunks.get("company_blocks") or {}
 
     css = """
     @page { size: a4 portrait; margin: 2.5cm; }
     body { font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.4; color: #000; }
+    .sender { text-align: left; margin-bottom: 20px; font-size: 10pt; }
     .recipient { text-align: right; margin-bottom: 40px; font-size: 10pt; }
-    .meta { text-align: right; margin-bottom: 30px; }
+    .meta { text-align: left; margin-bottom: 30px; }
     .object { font-weight: bold; margin-bottom: 20px; }
     .content p { margin-bottom: 12px; text-align: justify; }
     .signature { margin-top: 40px; }
     """
 
     html = f"<html><head><style>{css}</style></head><body>"
-
+    # En-tête de l'expéditeur
+    html += "<div class='sender'>"
+    if header.get("fullname_block"): html += f"{safe(header['fullname_block'])}<br/>"
+    if header.get("location_block"): html += f"{safe(header['location_block'])}<br/>"
+    if header.get("email_block"): html += f"{safe(header['email_block'])}<br/>"
+    if header.get("phone_block"): html += f"{safe(header['phone_block'])}<br/>"
+    if header.get("websites_block"): html += f"{safe(header['websites_block'])}<br/>"
+    html += "</div>"
     # Destinataire
     html += "<div class='recipient'>"
-    if company.get("contact_block"): html += f"{safe(company['contact_block'])}<br/>"
+    if company.get("contact_block"): html += f"<strong>{safe(company['contact_block'])}</strong><br/>"
     if company.get("company_name_block"): html += f"{safe(company['company_name_block'])}<br/>"
     if company.get("company_address_block"): html += f"{safe(company['company_address_block'])}<br/>"
     html += "</div>"
@@ -447,7 +459,7 @@ def build_cover_letter_docx_from_chunks(
     place_date = safe_block(chunks.get("place_date_line"))
     if place_date:
         pd = doc.add_paragraph(place_date)
-        pd.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        pd.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # ==========================
     # OBJET (gras)
@@ -641,6 +653,8 @@ if __name__ == "__main__":
         docx_filename="lettre_motivation_gemini_demo.docx",
         gender="M",
         reference=None,
+        api_key = GEMINI_API_KEY,
+        model_name = GEMINI_MODEL_NAME
     )
     print("DOCX:", paths["docx_path"])
     print("PDF :", paths["pdf_path"])

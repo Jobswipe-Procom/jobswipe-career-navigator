@@ -531,14 +531,14 @@ const ApplicationDashboard: React.FC = () => {
     };
 
     try {
-        const apiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
+        const apiKey = import.meta.env.GEMINI_API_KEY;
         if (!apiKey) {
-            toast.error("Clé API Gemini manquante. Veuillez la configurer dans votre profil.");
+            toast.error("Clé API Gemini manquante dans la configuration.");
             throw new Error("Clé API Gemini manquante");
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = "gemini-1.5-flash";
+        const modelName = import.meta.env.GEMINI_MODEL_NAME;
         const model = genAI.getGenerativeModel({ model: modelName });
 
         const prompt = `
@@ -613,16 +613,16 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
     setContactSearchResults(null);
 
     try {
-      const apiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
+      const apiKey = import.meta.env.GEMINI_API_KEY;
       if (!apiKey) {
-        toast.error("Clé API Gemini manquante. Veuillez la configurer dans votre profil.");
+        toast.error("Clé API Gemini manquante dans la configuration.");
         setIsContactSearching(false);
         return;
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: import.meta.env.GEMINI_MODEL_NAME,
         tools: [{ googleSearch: {} }] 
       });
 

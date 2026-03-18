@@ -479,9 +479,6 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
     } catch (err) {
       console.error("Erreur import CV:", err);
       let errorMessage = "Impossible d'analyser le CV.";
-      if (err instanceof Error && err.message.includes("GEMINI_API_KEY")) {
-        errorMessage = "La clé API Gemini n'est pas configurée sur le serveur.";
-      }
       toast({ variant: "destructive", description: errorMessage });
     } finally {
       setImporting(false);

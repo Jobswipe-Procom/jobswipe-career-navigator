@@ -20,7 +20,7 @@ from functions.matcher_engine import batch_match_offers
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME")
 
 app = FastAPI(title="JobSwipe Generator API", version="1.0")
 
@@ -54,8 +54,6 @@ cors_allow_headers = [
     "Content-Type",
     "Accept",
     "Authorization",
-    "x-gemini-api-key",
-    "x-gemini-model-name",
 ]
 
 # CORS : doit être le premier middleware ajouté pour envelopper toutes les réponses (y compris prévol OPTIONS)
@@ -97,12 +95,16 @@ def _check_gemini_key_is_present(manual_content: Any):
 
 
 @app.post("/generate-cv")
-async def generate_cv(request: ApplicationRequest):
+async def generate_cv(
+    request: ApplicationRequest
+):
     """
     Génère uniquement le CV optimisé (PDF).
     Si manual_content est fourni : pas d'appel Gemini, le contenu est utilisé pour générer HTML puis PDF (xhtml2pdf).
     """
-    _check_gemini_key_is_present(request.manual_content)
+    if not request.manual_content and not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="La clé API Gemini est manquante (Header ou Env).")
+
     try:
         results = service.process_cv(
             request.cv_data, request.offer_data,
@@ -129,12 +131,16 @@ async def generate_cv(request: ApplicationRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/generate-cover-letter")
-async def generate_cover_letter(request: ApplicationRequest):
+async def generate_cover_letter(
+    request: ApplicationRequest
+):
     """
     Génère uniquement la lettre de motivation (PDF).
     Si manual_content est fourni : pas d'appel Gemini, le contenu (chunks) est utilisé pour générer HTML puis PDF (xhtml2pdf).
     """
-    _check_gemini_key_is_present(request.manual_content)
+    if not request.manual_content and not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="La clé API Gemini est manquante (Header ou Env).")
+
     try:
         results = service.process_motivation(
             request.cv_data, request.offer_data,

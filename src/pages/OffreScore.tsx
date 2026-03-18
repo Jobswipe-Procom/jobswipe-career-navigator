@@ -129,18 +129,7 @@ const OffreScore = () => {
       const offerData = formatJobForBackend(jobData!);
 
       // 4. Appeler l'API de scoring
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
-          setLoading(false);
-          return;
-      }
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
-      };
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
 
       const response = await fetch(buildUrl("/score-application"), {
         method: 'POST',
