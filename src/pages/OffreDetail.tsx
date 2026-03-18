@@ -29,7 +29,6 @@ const OffreDetail = () => {
   const [generating, setGenerating] = useState(false);
   const [generatingCV, setGeneratingCV] = useState(false);
   const [generatingCL, setGeneratingCL] = useState(false);
-  const [score, setScore] = useState<number | null>(null);
   const [generatedDocs, setGeneratedDocs] = useState<{
     cv?: { pdf: string; content: any; html?: string };
     cl?: { pdf: string; content: any; html?: string };
@@ -239,36 +238,6 @@ const OffreDetail = () => {
       language: "fr"
     };
   };
-
-  useEffect(() => {
-    if (!job || !userProfile) return;
-
-    const fetchScore = async () => {
-      try {
-        const cvData = formatProfileForBackend(userProfile);
-        // Utiliser les données brutes si disponibles pour avoir les hard_skills
-        const offerData = { ...job, ...(job.raw || {}) };
-        
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-        };
-
-        const res = await fetch(buildUrl("/score-fast"), {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ cv_data: cvData, offer_data: offerData })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setScore(data.score);
-        }
-      } catch (e) {
-        console.error("Erreur fetch score:", e);
-      }
-    };
-    fetchScore();
-  }, [job, userProfile]);
 
   // Fonction robuste pour télécharger un PDF depuis une chaîne Base64
   const downloadBase64Pdf = (filename: string, base64Data: string) => {
@@ -994,18 +963,6 @@ const OffreDetail = () => {
           <CardHeader className="relative">
             <div className="flex justify-between items-start">
               <h2 className="text-xl font-bold text-foreground pr-16">Poste</h2>
-              {score !== null && (
-                <Badge 
-                  className="absolute top-6 right-6 text-lg px-4 py-2 border"
-                  style={{
-                    backgroundColor: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 85%, 96%)`,
-                    color: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 90%, 35%)`,
-                    borderColor: `hsl(${Math.min(120, Math.max(0, (score / 100) * 120))}, 80%, 80%)`,
-                  }}
-                >
-                  {score}%
-                </Badge>
-              )}
             </div>
             <p className="text-muted-foreground text-sm mt-1">{job.company}</p>
             

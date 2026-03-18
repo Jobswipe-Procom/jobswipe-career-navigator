@@ -21,6 +21,7 @@ interface OffresProps {
 
 // TODO: Remettre à 20 après les tests
 const DAILY_LIKE_LIMIT = 10; // Limite de likes par jour (actuellement à 10 pour les tests, remettre à 20 en production)
+const CACHE_VERSION = "1.0"; // Incrémentez cette valeur (ex: "1.1") si vous changez la structure des données Job
 
 // Types pour l'historique des swipes
 type SwipeAction = "like" | "dislike" | "superlike";
@@ -30,61 +31,6 @@ interface SwipeHistoryItem {
   action: SwipeAction;
   jobId: string;
 }
-
-// Composant pour afficher le score de compatibilité dans les listes
-const JobScore = ({ job, cvData }: { job: Job; cvData: any }) => {
-  const [score, setScore] = useState<number | null>((job as any).score ?? null);
-
-  useEffect(() => {
-    // Si le job a un score pré-calculé (ex: import), on l'utilise
-    if ((job as any).score !== undefined && (job as any).score !== null) {
-        setScore((job as any).score);
-        return;
-    }
-
-    if (!job || !cvData) return;
-
-    const fetchScore = async () => {
-      try {
-        const headers: HeadersInit = { "Content-Type": "application/json" };
-
-        const res = await fetch(buildUrl("/score-fast"), {
-          method: "POST",
-          headers,
-          // On fusionne job et job.raw pour s'assurer d'avoir les hard_skills pour le scoring
-          body: JSON.stringify({ cv_data: cvData, offer_data: { ...job, ...(job.raw || {}) } }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setScore(data.score);
-        }
-      } catch (e) {
-        console.error("Erreur fetch score:", e);
-      }
-    };
-    fetchScore();
-  }, [job, cvData]);
-
-  if (score === null) return null;
-
-  // Calcul de la couleur dynamique (Rouge 0 -> Vert 120)
-  const hue = Math.min(120, Math.max(0, (score / 100) * 120));
-  const style = {
-    backgroundColor: `hsl(${hue}, 85%, 96%)`,
-    color: `hsl(${hue}, 90%, 35%)`,
-    borderColor: `hsl(${hue}, 80%, 80%)`,
-  };
-
-  return (
-    <div 
-      className="absolute top-4 left-4 px-3 py-1 rounded-full border font-bold text-sm z-20 shadow-sm flex items-center gap-1"
-      style={style}
-    >
-      <span className="text-xs font-normal opacity-80">Match</span>
-      {Math.round(score)}%
-    </div>
-  );
-};
 
 // Composant pour la page de swipe des offres (JobswipeOffers)
 const JobswipeOffers = ({ userId }: OffresProps) => {
@@ -162,9 +108,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   // State pour l'historique des swipes (pour le rewind)
   const [swipeHistory, setSwipeHistory] = useState<SwipeHistoryItem[]>([]);
 
-  // State pour les données CV et le score courant
-  const [userCvData, setUserCvData] = useState<any>(null);
-  const [currentScore, setCurrentScore] = useState<number | null>(null);
+
 
   // Fonction utilitaire : obtenir le début de la journée (minuit local)
   const getStartOfDay = (): Date => {
@@ -251,67 +195,13 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
     }
   };
 
-  // Charger les données CV de l'utilisateur (requis pour le scoring)
-  useEffect(() => {
-    const loadUserCv = async () => {
-      console.log("👤 [JobSwipe] Chargement du profil utilisateur pour le scoring...");
-      try {
-        const { data, error } = await (supabase as any)
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
-
-        if (data) {
-          // Transformation des données de la table 'profiles' au format attendu par le backend
-          const formattedCvData = {
-            ...data, // Inclure toutes les données brutes du profil
-            skills: {
-              hard_skills: data.hard_skills || [],
-              soft_skills: data.soft_skills || [],
-              languages: data.languages || [],
-            },
-            professional_experiences: (data.experiences || []).map((exp: any) => ({
-              title: exp.role || "", 
-              company: exp.company || "",
-              description: exp.description || "",
-              start_date: exp.startDate || "",
-              end_date: exp.endDate || "",
-              ...exp
-            })),
-            education: data.education || [],
-            raw_summary: data.target_role || "",
-          };
-          setUserCvData(formattedCvData);
-          console.log("✅ [JobSwipe] Profil chargé avec succès.");
-        } else {
-          console.warn("⚠️ [JobSwipe] Aucun profil trouvé.");
-        }
-      } catch (err) {
-        console.error("❌ [JobSwipe] Erreur chargement CV:", err);
-      }
-    };
-    loadUserCv();
-  }, [userId]);
-
-  // Mettre à jour le score courant basé sur l'offre affichée (qui a déjà son score calculé)
-  useEffect(() => {
-    const currentOffer = jobs[currentIndex];
-    if (currentOffer && (currentOffer as any).score !== undefined) {
-      setCurrentScore((currentOffer as any).score);
-    } else {
-      setCurrentScore(null);
-    }
-  }, [currentIndex, jobs]);
-
   // Charger les offres non swipées au montage si onglet "all"
   useEffect(() => {
-    // On attend que userCvData soit chargé pour pouvoir trier par score
-    if (activeTab === "all" && userCvData) {
+    if (activeTab === "all") {
       loadUnswipedJobs();
       loadLikesToday();
     }
-  }, [userId, activeTab, userCvData]);
+  }, [userId, activeTab]);
 
   // Charger les offres likées quand on passe à l'onglet "liked"
   useEffect(() => {
@@ -361,11 +251,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
   const loadUnswipedJobs = async (force: boolean = false) => {
     console.log("🔄 [JobSwipe] Démarrage du chargement des offres...");
     try {
-      if (!userCvData) {
-        console.log("⚠️ [JobSwipe] Pas de données CV utilisateur, annulation.");
-        return; // Sécurité supplémentaire
-      }
-
       setLoading(true);
       setError(null);
 
@@ -391,7 +276,10 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       // 1. Tenter de charger depuis le cache si pas de force refresh
       if (!force) {
         const cachedFeed = localStorage.getItem("JOBSWIPE_FEED_CACHE");
-        if (cachedFeed) {
+        const cachedVersion = localStorage.getItem("JOBSWIPE_CACHE_VERSION");
+        
+        // On utilise le cache seulement s'il existe ET qu'il correspond à la version actuelle du code
+        if (cachedFeed && cachedVersion === CACHE_VERSION) {
           try {
             const parsedCache = JSON.parse(cachedFeed);
             // Filtrer les jobs du cache qui ont été swipés entre temps
@@ -436,53 +324,15 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       // --- CALCUL DES SCORES ET TRI ---
       let sortedJobs = unswipedJobs;
       
-      try {
-        console.log("🧠 [JobSwipe] Appel API /score-batch pour calculer la compatibilité...");
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-
-        // Préparation des données pour le batch scoring (Titre + Description uniquement pour NLP)
-        const offersPayload = unswipedJobs.map(j => ({
-          id: j.id,
-          title: j.title,
-          description: j.description || j.raw?.description || ""
-        }));
-        console.log("📤 [JobSwipe] Payload envoyé à /score-batch :", { cv_data: userCvData, offers: offersPayload });
-
-        const res = await fetch(buildUrl("/score-batch"), {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ cv_data: userCvData, offers: offersPayload })
-        });
-
-        if (res.ok) {
-          const { scores } = await res.json();
-          console.log("✅ [JobSwipe] Scores reçus :", scores);
-          // Associer le score à chaque job et trier
-          sortedJobs = unswipedJobs.map(job => ({
-            ...job,
-            score: scores[job.id] || 0
-          })).sort((a, b) => b.score - a.score); // Tri décroissant (plus compatible en premier)
-          
-          console.log("📊 [JobSwipe] Offres triées par score de compatibilité.");
-          if (sortedJobs.length > 0) {
-             console.log(`🏆 [JobSwipe] Top offre: "${sortedJobs[0].title}" (${sortedJobs[0].score}%)`);
-          }
-        } else {
-            console.warn("⚠️ [JobSwipe] Erreur API score-batch:", res.status, res.statusText);
-        }
-      } catch (scoreErr) {
-        console.error("❌ [JobSwipe] Erreur lors du scoring batch:", scoreErr);
-        // En cas d'erreur, on garde l'ordre par défaut (date)
-      }
-
       // On ne garde que les 20 premiers APRES le tri par pertinence
       finalJobs = sortedJobs.slice(0, 40);
       
       // Sauvegarder dans le cache
       localStorage.setItem("JOBSWIPE_FEED_CACHE", JSON.stringify(finalJobs));
+      localStorage.setItem("JOBSWIPE_CACHE_VERSION", CACHE_VERSION);
       
       if (force) {
-        toast({ description: "Offres rafraîchies et scores recalculés !" });
+        toast({ description: "Offres rafraîchies !" });
       }
       }
 
@@ -927,25 +777,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     famille: parsedJob.famille
                   };
                   
-                  // --- CALCUL DU SCORE (Batch Match Offers via /score-fast) ---
-                  if (userCvData) {
-                      try {
-                          const scoreRes = await fetch(buildUrl("/score-fast"), {
-                              method: 'POST',
-                              headers,
-                              body: JSON.stringify({ 
-                                  cv_data: userCvData, 
-                                  offer_data: { ...newJob, ...rawData } 
-                              })
-                          });
-                          if (scoreRes.ok) {
-                              const scoreData = await scoreRes.json();
-                              newJob.score = scoreData.score;
-                          }
-                      } catch (e) {
-                          console.error("Erreur calcul score import:", e);
-                      }
-                  }
                   
                   // 3. Sauvegarder dans le localStorage
                   const localJobs = JSON.parse(localStorage.getItem("JOBSWIPE_LOCAL_IMPORTED_JOBS") || "[]");
@@ -1219,7 +1050,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
               <button
                 onClick={() => loadUnswipedJobs(true)}
                 className="px-4 py-2.5 rounded-full font-semibold text-xs sm:text-sm transition-all duration-200 ease-out bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:scale-110 active:scale-105 cursor-pointer flex items-center gap-2 whitespace-nowrap"
-                title="Rafraîchir les offres et recalculer les scores"
+                title="Rafraîchir les offres"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span className="hidden sm:inline">
@@ -1343,7 +1174,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                             formatSalary={formatSalary}
                             getJobDescription={getJobDescriptionShort}
                             disabled={swiping === currentOffer.id || (limitReached && false)}
-                            score={currentScore}
                           />
 
                         {/* Horloge de limite atteinte - Style Alan */}
@@ -1470,7 +1300,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                 <div className="space-y-4 max-w-2xl mx-auto">
                   {likedJobs.map((job) => (
                     <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative hover:shadow-md hover:scale-[1.01] transition-all duration-200">
-                      {userCvData && <JobScore job={job} cvData={userCvData} />}
                       <div className="p-6 space-y-4">
                         {/* Titre */}
                         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-2xl p-4 border border-indigo-100">
@@ -1591,7 +1420,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                 <div className="space-y-4 max-w-2xl mx-auto">
                   {superlikedJobs.map((job) => (
                     <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative hover:shadow-md hover:scale-[1.01] transition-all duration-200">
-                      {userCvData && <JobScore job={job} cvData={userCvData} />}
                       <div className="p-6 space-y-4">
                         {/* Titre avec badge Superlike */}
                         <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl p-4 border border-indigo-100">
@@ -1717,7 +1545,6 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                 <div className="space-y-4 max-w-2xl mx-auto">
                   {importedJobs.map((job) => (
                     <div key={job.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative hover:shadow-md hover:scale-[1.01] transition-all duration-200">
-                      {userCvData && <JobScore job={job} cvData={userCvData} />}
                       <div className="p-6 space-y-4">
                         {/* Titre avec badge Importé */}
                         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100">
