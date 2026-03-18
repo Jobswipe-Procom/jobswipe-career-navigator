@@ -249,13 +249,8 @@ const OffreDetail = () => {
         // Utiliser les données brutes si disponibles pour avoir les hard_skills
         const offerData = { ...job, ...(job.raw || {}) };
         
-        const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-        if (!geminiKey) return;
-
         const headers: HeadersInit = {
           "Content-Type": "application/json",
-          "x-gemini-api-key": geminiKey,
-          "x-gemini-model-name": "gemini-1.5-flash"
         };
 
         const res = await fetch(buildUrl("/score-fast"), {
@@ -334,16 +329,8 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
-          setGenerating(false);
-          return;
-      }
       const headers: HeadersInit = {
         "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       let cvResult = existingDocs.cv;
@@ -434,16 +421,8 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
-          setGeneratingCV(false);
-          return;
-      }
       const headers: HeadersInit = {
         "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       const response = await fetch(buildUrl("/generate-cv"), {
@@ -508,16 +487,8 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
-          setGeneratingCL(false);
-          return;
-      }
       const headers: HeadersInit = {
         "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       const response = await fetch(buildUrl("/generate-cover-letter"), {
@@ -566,16 +537,9 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante." });
-          return;
-      }
 
       const headers: HeadersInit = {
         "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       const endpoint = docType === 'cv' ? '/generate-cv' : '/generate-cover-letter';
@@ -645,16 +609,9 @@ const OffreDetail = () => {
     try {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
-      const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      if (!geminiKey) {
-          toast({ variant: "destructive", description: "Clé API Gemini manquante." });
-          return;
-      }
 
       const headers: HeadersInit = {
         "Content-Type": "application/json",
-        "x-gemini-api-key": geminiKey,
-        "x-gemini-model-name": "gemini-1.5-flash"
       };
 
       const response = await fetch(buildUrl("/generate-cv"), {
@@ -1233,7 +1190,7 @@ const OffreDetail = () => {
                 className="bg-secondary hover:bg-secondary/90"
               >
                 <TrendingUp className="w-4 h-4 mr-2" />
-                Score
+                Analyse CV (IA)
               </PrimaryButton>
               
               {generatedDocs?.cv ? (
@@ -1279,15 +1236,6 @@ const OffreDetail = () => {
                   {generatingCL ? "Génération..." : "Générer Lettre"}
                 </PrimaryButton>
               )}
-
-              <PrimaryButton
-                onClick={handleGenerateApplication}
-                disabled={generating || generatingCV || generatingCL}
-                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md"
-              >
-                {generating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
-                {generating ? "Génération IA en cours..." : "Générer Pack Candidature IA"}
-              </PrimaryButton>
 
               <SecondaryButton
                 onClick={handleSyncWithExtension}
@@ -1395,11 +1343,6 @@ const OffreDetail = () => {
                       {generatingCL ? "Génération..." : "Générer Lettre"}
                     </PrimaryButton>
                   )}
-
-                  <PrimaryButton onClick={handleGenerateApplication} disabled={generating || generatingCV || generatingCL} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md">
-                    {generating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
-                    {generating ? "Génération IA en cours..." : "Générer Pack Candidature IA"}
-                  </PrimaryButton>
 
                   <SecondaryButton onClick={handleSyncWithExtension} className="w-full border-dashed border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300">
                     <Puzzle className="w-5 h-5 mr-2" />

@@ -14,14 +14,14 @@ try:
     from .compatibility import score_profile_with_gemini
     from .experience_generator import generate_full_cv_content
     from .cv_generator import generate_cv_html, convert_html_to_pdf
-    from .cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
+    from .cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf, build_cover_letter_html_from_chunks
 except ImportError:
     from cv_parsing import parse_cv_with_gemini, extract_text_from_file
     from job_offer_parser import parse_job_offer_gemini
     from compatibility import score_profile_with_gemini
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
-    from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf
+    from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf, build_cover_letter_html_from_chunks
 
 def _get_first_or_default(items: Optional[List[Any]], default: Any = "") -> Any:
     """Helper pour récupérer le premier élément d'une liste ou une valeur par défaut."""
@@ -130,26 +130,6 @@ class JobSwipeGeneratorService:
         results['paths'] = {'cv_pdf': pdf_path}
         return results
 
-    def _generate_cl_html_from_manual(self, content: Dict[str, Any], cv_parsed: Dict[str, Any], offer_parsed: Dict[str, Any]) -> str:
-        """Génère un HTML simple style Finance pour la lettre de motivation."""
-        # Récupération des champs
-        subject = content.get("subject", f"Candidature au poste de {offer_parsed.get('job_title', 'Poste')}")
-        greeting = content.get("greeting", "Madame, Monsieur,")
-        paras = [content.get(f"para{i}") for i in range(1, 6) if content.get(f"para{i}")]
-        signature = content.get("signature", "Cordialement,")
-        
-        # Construction du corps
-        body_paragraphs = "".join([f"<p style='margin-bottom: 12px; text-align: justify;'>{p}</p>" for p in paras if p])
-        
-        return f"""<!DOCTYPE html>
-        <html>
-        <body style="font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; margin: 2.5cm 2cm; color: #000;">
-            <div style="font-weight: bold; margin-bottom: 20px;">Objet : {subject}</div>
-            <div style="margin-bottom: 15px;">{greeting}</div>
-            {body_paragraphs}
-            <div style="margin-top: 30px;">{signature}</div>
-        </body></html>"""
-
     def process_motivation(
         self, 
         cv_parsed: Dict[str, Any],
@@ -168,8 +148,8 @@ class JobSwipeGeneratorService:
             # CAS 1 : Contenu manuel (édition utilisateur)
             generated_content = manual_content
             
-            # Génération du HTML
-            html_content = self._generate_cl_html_from_manual(generated_content, cv_parsed, offer_parsed)
+            # Génération du HTML en utilisant la fonction partagée
+            html_content = build_cover_letter_html_from_chunks(generated_content)
             
             # Génération du PDF
             pdf_filename = f"cover_letter_{uuid.uuid4().hex}.pdf"

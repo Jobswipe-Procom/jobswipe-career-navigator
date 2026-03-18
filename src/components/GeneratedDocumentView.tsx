@@ -184,6 +184,16 @@ export const GeneratedDocumentView = ({
     }));
   };
 
+  const handleBlockChange = (blockName: 'header_blocks' | 'company_blocks', field: string, value: string) => {
+    setEditableContent((prev: any) => ({
+      ...prev,
+      [blockName]: {
+        ...(prev?.[blockName] || {}),
+        [field]: value
+      }
+    }));
+  };
+
   const handleFieldChange = (field: string, value: any) => {
     setEditableContent((prev: any) => ({ ...prev, [field]: value }));
   };
@@ -555,9 +565,26 @@ export const GeneratedDocumentView = ({
                 ) : (
                   <>
                      {/* --- ÉDITEUR LETTRE DE MOTIVATION --- */}
-                    <EditorSection title="En-tête">
+                    <EditorSection title="Vos Informations (En-tête)">
+                      <Field label="Nom complet"><Input value={editableContent?.header_blocks?.fullname_block || ""} onChange={(e) => handleBlockChange('header_blocks', 'fullname_block', e.target.value)} /></Field>
+                      <Field label="Adresse/Ville"><Input value={editableContent?.header_blocks?.location_block || ""} onChange={(e) => handleBlockChange('header_blocks', 'location_block', e.target.value)} /></Field>
+                      <Field label="Email"><Input value={editableContent?.header_blocks?.email_block || ""} onChange={(e) => handleBlockChange('header_blocks', 'email_block', e.target.value)} /></Field>
+                      <Field label="Téléphone"><Input value={editableContent?.header_blocks?.phone_block || ""} onChange={(e) => handleBlockChange('header_blocks', 'phone_block', e.target.value)} /></Field>
+                      <Field label="Liens (Portfolio, etc)"><Input value={editableContent?.header_blocks?.websites_block || ""} onChange={(e) => handleBlockChange('header_blocks', 'websites_block', e.target.value)} /></Field>
+                    </EditorSection>
+                    
+                    <EditorSection title="Informations de l'entreprise">
+                      <Field label="Nom du recruteur (si connu)"><Input value={editableContent?.company_blocks?.contact_block || ""} onChange={(e) => handleBlockChange('company_blocks', 'contact_block', e.target.value)} /></Field>
+                      <Field label="Nom de l'entreprise"><Input value={editableContent?.company_blocks?.company_name_block || ""} onChange={(e) => handleBlockChange('company_blocks', 'company_name_block', e.target.value)} /></Field>
+                      <Field label="Adresse de l'entreprise"><Input value={editableContent?.company_blocks?.company_address_block || ""} onChange={(e) => handleBlockChange('company_blocks', 'company_address_block', e.target.value)} /></Field>
+                    </EditorSection>
+
+                    <EditorSection title="Métadonnées">
+                      <Field label="Lieu et date (ex: Fait à Paris, le 1er janvier 2024)">
+                        <Input value={editableContent?.place_date_line || ""} onChange={(e) => handleFieldChange('place_date_line', e.target.value)} />
+                      </Field>
                       <Field label="Objet de la lettre">
-                        <Input value={editableContent?.subject || ""} onChange={(e) => handleFieldChange('subject', e.target.value)} />
+                        <Input value={editableContent?.objet_line || ""} onChange={(e) => handleFieldChange('objet_line', e.target.value)} />
                       </Field>
                       <Field label="Formule d'appel (ex: Madame, Monsieur,)">
                         <Input value={editableContent?.greeting || ""} onChange={(e) => handleFieldChange('greeting', e.target.value)} />
