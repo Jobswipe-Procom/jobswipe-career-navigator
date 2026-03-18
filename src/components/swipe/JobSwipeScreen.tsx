@@ -30,9 +30,9 @@ export const JobSwipeScreen = ({
 }: JobSwipeScreenProps) => {
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col w-full">
       {/* Carte swipeable */}
-      <div className="flex-1 flex items-center justify-center px-4 py-2 relative">
+      <div className="flex items-center justify-center px-4 py-0 relative">
         <JobCard
           offer={offer}
           onSwipeRight={onSwipeRight}

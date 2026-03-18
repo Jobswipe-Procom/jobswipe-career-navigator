@@ -997,7 +997,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
       <div className="flex-1 flex flex-col px-2 sm:px-3 py-3 sm:py-4 relative z-10 overflow-y-auto">
         <div className="w-full max-w-[900px] mx-auto flex-1 flex flex-col">
           {/* Header filtres */}
-          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-1 pl-3">
+          <div className="flex gap-2 items-center justify-start pt-2 overflow-x-auto pb-2 md:pb-1 pl-3">
             {/* Boutons pour vue PC/Tablette */}
             <div className="hidden md:flex items-center gap-2">
               {tabOrder.map((tab) => (
@@ -1157,7 +1157,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="h-full flex flex-col justify-center">
+                  <div className="h-full flex flex-col justify-start md:justify-center pt-12 md:pt-0">
                     {/* Carte swipeable - Style Tinder */}
                     {(() => {
                       const currentOffer = jobs[currentIndex];
@@ -1201,7 +1201,7 @@ const JobswipeOffers = ({ userId }: OffresProps) => {
                           const currentOffer = jobs[currentIndex];
                           if (!currentOffer) return null;
                           return (
-                            <div className="flex justify-center items-center gap-3 pt-4">
+                            <div className="flex justify-center items-center gap-3 pt-6 md:pt-3">
                               {/* Bouton Rewind (retour en arrière) */}
                               <button
                                 onClick={handleRewind}

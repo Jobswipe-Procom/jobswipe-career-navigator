@@ -212,7 +212,7 @@ export const JobCard = React.memo(({
           }}
           whileDrag={{ cursor: "grabbing", scale: 1.02 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-white rounded-3xl overflow-hidden shadow-2xl relative w-full h-auto max-h-[600px] min-h-[520px] md:min-h-[460px]"
+          className="bg-white rounded-3xl overflow-hidden shadow-2xl relative w-full h-auto max-h-[600px] min-h-[364px] md:min-h-[460px]"
         >
           {/* Like Overlay (droite) */}
           <motion.div
@@ -254,7 +254,7 @@ export const JobCard = React.memo(({
             </div>
             
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white/20 text-[180px] font-black leading-none select-none">
+              <div className="text-white/20 text-[160px] md:text-[180px] font-black leading-none select-none">
                 {offer.company.substring(0, 2).toUpperCase()}
               </div>
             </div>
@@ -269,7 +269,7 @@ export const JobCard = React.memo(({
             )}
           </div>
 
-          {/* Zone Infos (40% de la hauteur) */}
+          {/* Zone Infos (50% de la hauteur sur mobile) */}
           <div className="relative h-[50%] md:h-[70%] bg-white p-6 flex flex-col justify-between">
             <div className="flex-1">
               <div className="flex items-start justify-between gap-3 mb-2">
