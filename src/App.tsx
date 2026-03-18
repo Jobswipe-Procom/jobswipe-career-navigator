@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import AuthPage from "./pages/AuthPage";
@@ -11,7 +11,9 @@ import AuthCallback from "./pages/AuthCallback";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import HomePage from "./pages/HomePage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import { OnboardingGuard } from "./components/OnboardingGuard";
 
 // Lazy load heavy pages for better code splitting
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -94,23 +96,58 @@ const App = () => {
                 <Route path="/profil" element={<ProfilePage userId={session.user.id} />} />
                 <Route path="/cv" element={<CV />} />
                 {/* Routes Jobswipe */}
-                <Route path="/jobswipe" element={<JobswipeOffers userId={session.user.id} />} />
-                <Route path="/jobswipe/offres" element={<JobswipeOffers userId={session.user.id} />} />
+                <Route
+                  path="/jobswipe"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
+                <Route
+                  path="/jobswipe/offres"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
                 {/* Routes offres (legacy - rediriger vers jobswipe) */}
-                <Route path="/offres" element={<JobswipeOffers userId={session.user.id} />} />
+                <Route
+                  path="/offres"
+                  element={
+                    <OnboardingGuard>
+                      <JobswipeOffers userId={session.user.id} />
+                    </OnboardingGuard>
+                  }
+                />
                 <Route path="/offres/:id" element={<OffreDetail />} />
                 <Route path="/offres/:id/fiche" element={<OffreFiche />} />
-                <Route path="/offres/:id/score" element={<OffreScore />} />
+                <Route
+                  path="/offres/:id/score"
+                  element={
+                    <OnboardingGuard>
+                      <OffreScore />
+                    </OnboardingGuard>
+                  }
+                />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/application-dashboard" element={<ApplicationDashboard />} />
                 <Route path="/calendrier" element={<Calendrier />} />
+                {/* Alias de routes d'auth quand l'utilisateur est déjà connecté */}
+                <Route path="/auth" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </>
             ) : authReady && !session ? (
               <>
-                {/* Routes publiques - utilisateur non authentifié (seulement après authReady) */}
-                <Route path="*" element={<AuthPage />} />
+                {/* Landing en page d'accueil, /auth comme route principale d'authentification */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                {/* Alias /login -> /auth pour compatibilité avec les CTA */}
+                <Route path="/login" element={<Navigate to="/auth" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : null}
             </Routes>

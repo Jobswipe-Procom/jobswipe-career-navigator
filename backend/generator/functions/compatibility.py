@@ -1,5 +1,5 @@
 """
-compatibility_gemini.py
+compatibility.py
 
 Use Gemini to compute a compatibility score between:
 - a parsed job offer (output of parse_job_offer_gemini)
@@ -228,7 +228,7 @@ def generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
     """
     Call Gemini with the given prompt and return the raw text output.
     """
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,
@@ -344,5 +344,5 @@ if __name__ == "__main__":
     }
 
     print("[INFO] Scoring compatibility with Gemini...")
-    result = score_profile_with_gemini(offer_demo, cv_demo,api_key=google_api_key, model_name="gemini-2.5-flash")
+    result = score_profile_with_gemini(offer_demo, cv_demo,api_key=google_api_key, model_name="gemini-1.5-flash")
     print(json.dumps(result, indent=2, ensure_ascii=False))

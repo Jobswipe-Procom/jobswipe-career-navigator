@@ -4,6 +4,7 @@ import re
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ load_dotenv()
 # ============================================================================
 
 def _generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
         contents=prompt
@@ -49,7 +50,7 @@ def _extract_json(output: str) -> Dict[str, Any]:
 # 3. GENERATEUR UNIQUE (ONE-SHOT)
 # ============================================================================
 
-def generate_full_cv_content(offer_parsed: Dict[str, Any], user_data: Dict[str, Any], api_key: str, model_name: str = "gemini-2.5-flash") -> Dict[str, Any]:
+def generate_full_cv_content(offer_parsed: Dict[str, Any], user_data: Dict[str, Any], api_key: str, model_name: str = "gemini-1.5-flash") -> Dict[str, Any]:
     """
     Génère l'intégralité du contenu du CV en un seul appel API pour garantir
     la cohérence, réduire la latence et optimiser les coûts.

@@ -250,12 +250,13 @@ const OffreDetail = () => {
         const offerData = { ...job, ...(job.raw || {}) };
         
         const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-        const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
         if (!geminiKey) return;
 
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        headers['x-gemini-api-key'] = geminiKey;
-        if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+          "x-gemini-api-key": geminiKey,
+          "x-gemini-model-name": "gemini-1.5-flash"
+        };
 
         const res = await fetch(buildUrl("/score-fast"), {
           method: 'POST',
@@ -334,15 +335,16 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
           toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
           setGenerating(false);
           return;
       }
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
+      };
 
       let cvResult = existingDocs.cv;
       let clResult = existingDocs.cl;
@@ -433,15 +435,16 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
           toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
           setGeneratingCV(false);
           return;
       }
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
+      };
 
       const response = await fetch(buildUrl("/generate-cv"), {
         method: 'POST',
@@ -506,15 +509,16 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
       if (!geminiKey) {
           toast({ variant: "destructive", description: "Clé API Gemini manquante. Veuillez la configurer dans votre profil." });
           setGeneratingCL(false);
           return;
       }
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
+      };
 
       const response = await fetch(buildUrl("/generate-cover-letter"), {
         method: 'POST',
@@ -563,16 +567,16 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
-      
       if (!geminiKey) {
           toast({ variant: "destructive", description: "Clé API Gemini manquante." });
           return;
       }
 
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
+      };
 
       const endpoint = docType === 'cv' ? '/generate-cv' : '/generate-cover-letter';
       
@@ -642,16 +646,16 @@ const OffreDetail = () => {
       const cvData = formatProfileForBackend(userProfile);
       const offerData = formatJobForBackend(job);
       const geminiKey = localStorage.getItem("JOBSWIPE_GEMINI_KEY");
-      const geminiModel = localStorage.getItem("JOBSWIPE_GEMINI_MODEL");
-      
       if (!geminiKey) {
           toast({ variant: "destructive", description: "Clé API Gemini manquante." });
           return;
       }
 
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      headers['x-gemini-api-key'] = geminiKey;
-      if (geminiModel) headers['x-gemini-model-name'] = geminiModel;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "x-gemini-api-key": geminiKey,
+        "x-gemini-model-name": "gemini-1.5-flash"
+      };
 
       const response = await fetch(buildUrl("/generate-cv"), {
         method: 'POST',

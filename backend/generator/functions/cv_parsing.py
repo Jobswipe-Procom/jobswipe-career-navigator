@@ -34,7 +34,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Récupération du nom du modèle (avec une valeur par défaut si non définie)
-GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"  # ou "gemini-1.5-flash" selon votre accès
+GEMINI_MODEL_NAME = "gemini-1.5-flash"
 
 # ============================================================================
 # 2. OUTIL : extraction du JSON renvoyé par le modèle
@@ -221,7 +221,8 @@ def generate_with_gemini(prompt: str, api_key: str, model_name: str) -> str:
     """
     Call Gemini with the given prompt and return the raw text output.
     """
-    client = genai.Client(api_key=api_key)
+    print(f"DEBUG: Appel API v1 avec modèle {model_name}")
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1"))
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LogoHeader } from "@/components/LogoHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { InterestsSection } from "@/components/profile/InterestsSection";
 import { CollapsibleSection } from "@/components/profile/CollapsibleSection";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 import { SEOHead } from "@/components/seo";
+import { buildUrl } from "@/lib/apiClient";
 
 import { saveProfile as saveProfileToStorage } from "@/lib/storage";
 import { UserProfile } from "@/types/job";
@@ -42,6 +43,7 @@ const formatDateForInput = (dateStr: string | null | undefined): string => {
 
 const ProfilePage = ({ userId }: ProfilePageProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -225,6 +227,14 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
    * Utilise upsert pour créer ou mettre à jour le profil
    * Les colonnes JSONB acceptent directement les arrays JavaScript
    */
+  const isProfileComplete = (p: Profile | null): boolean => {
+    if (!p) return false;
+    const hasFirstName = Boolean(p.first_name && String(p.first_name).trim().length > 0);
+    const hasTargetRole = Boolean(p.target_role && String(p.target_role).trim().length > 0);
+    const hasExperience = Array.isArray(p.experiences) && p.experiences.length > 0;
+    return hasFirstName && hasTargetRole && hasExperience;
+  };
+
   const saveProfile = async () => {
     if (!profile || !currentUserId) {
       console.error("Impossible de sauvegarder: profil ou utilisateur manquant");
@@ -339,7 +349,13 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       };
       saveProfileToStorage(userProfileForStorage);
 
-      setTimeout(() => setSaveStatus(null), 3000);
+      // Si le profil est désormais complet, on peut rediriger vers les offres (flux d'onboarding)
+      if (isProfileComplete(profile)) {
+        const redirectTo = (location.state as any)?.redirectTo as string | undefined;
+        navigate(redirectTo || "/offres", { replace: true });
+      } else {
+        setTimeout(() => setSaveStatus(null), 3000);
+      }
     } catch (err: any) {
       console.error("Erreur lors de la sauvegarde du profil:", err);
       
@@ -389,7 +405,9 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
 
       const API_URL = import.meta.env.VITE_API_URL;
 
-      const response = await fetch(`${API_URL}/parse-cv-upload`, {
+      console.log("Tentative d'upload sur :", buildUrl("/parse-cv-upload"));
+
+      const response = await fetch(buildUrl("/parse-cv-upload"), {
         method: "POST",
         body: formData,
       });
@@ -569,6 +587,12 @@ const ProfilePage = ({ userId }: ProfilePageProps) => {
       </div>
       
       <div className="px-6 py-8 max-w-4xl mx-auto relative z-10">
+        {/* Message d'onboarding si l'utilisateur vient d'être redirigé */}
+        {location.state && (location.state as any).fromOnboarding && (
+          <div className="mb-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-sm text-indigo-800">
+            Complétez votre profil ou importez votre CV pour commencer à swiper sur les offres.
+          </div>
+        )}
         {/* En-tête avec titre et bouton de sauvegarde */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">

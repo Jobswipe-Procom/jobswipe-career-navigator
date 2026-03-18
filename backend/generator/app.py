@@ -242,6 +242,7 @@ async def parse_job(request: JobTextRequest):
 async def parse_cv_upload(file: UploadFile = File(...), current_profile: Optional[str] = Form(None)):
     """
     Reçoit un fichier (PDF ou DOCX), extrait le texte et retourne le profil structuré JSON.
+    Utilise x_gemini_api_key et x_gemini_model_name des headers (défaut: gemini-1.5-flash).
     """
     _check_gemini_key_is_present(None)
     try:
@@ -250,9 +251,8 @@ async def parse_cv_upload(file: UploadFile = File(...), current_profile: Optiona
         if current_profile:
             try:
                 profile_data = json.loads(current_profile)
-            except:
-                pass # Ignore if invalid JSON
-        
+            except Exception:
+                pass
         result = service.parse_cv_document(
             content, file.filename,
             api_key=GEMINI_API_KEY,

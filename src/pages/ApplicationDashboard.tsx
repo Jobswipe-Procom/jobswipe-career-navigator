@@ -538,7 +538,7 @@ const ApplicationDashboard: React.FC = () => {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash";
+        const modelName = "gemini-1.5-flash";
         const model = genAI.getGenerativeModel({ model: modelName });
 
         const prompt = `
@@ -622,7 +622,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
-        model: localStorage.getItem("JOBSWIPE_GEMINI_MODEL") || "gemini-1.5-flash",
+        model: "gemini-1.5-flash",
         tools: [{ googleSearch: {} }] 
       });
 
