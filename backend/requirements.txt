@@ -8,3 +8,6 @@ python-docx
 xhtml2pdf
 pyhere
 pypdf
+spacy>=3.8.1
+scikit-learn>=1.6.0
+numpy>=2.0.0
