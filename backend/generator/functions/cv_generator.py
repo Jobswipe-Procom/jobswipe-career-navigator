@@ -397,13 +397,13 @@ if __name__ == "__main__":
 
     print("[INFO] Génération du CV HTML à partir de dummy_full_cv...")
     html_cv_content = generate_cv_html(dummy_full_cv, dummy_contact)
-    html_output_path = here("backend/generator/cv/resume.html")
+    html_output_path = here("generator/cv/resume.html")
     with open(html_output_path, "w", encoding="utf-8") as f:
         f.write(html_cv_content)
     print(f"CV HTML généré à l’emplacement : {html_output_path}")
 
     # Compilation du CV HTML en PDF
-    html_pdf_path = here("backend/generator/cv/resume_html.pdf")
+    html_pdf_path = here("generator/cv/resume_html.pdf")
     convert_html_to_pdf(html_cv_content, html_pdf_path)
     print(f"CV HTML converti en PDF à l’emplacement : {html_pdf_path}")
     print("[INFO] Terminé.")
