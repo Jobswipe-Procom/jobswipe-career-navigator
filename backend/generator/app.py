@@ -86,6 +86,19 @@ class BatchScoreRequest(BaseModel):
 class JobTextRequest(BaseModel):
     text: str
 
+class FeedbackRequest(BaseModel):
+    job_title: str
+    company: str
+
+class TimingRequest(BaseModel):
+    stats: Dict[str, Any]
+    user_role: str = "Candidat"
+
+class ContactSearchRequest(BaseModel):
+    company: str
+    job_title: str
+    excluded_names: List[str] = []
+
 def _check_gemini_key_is_present(manual_content: Any):
     """Si Gemini est requis (pas de manual_content), vérifie que la clé est présente dans l'environnement."""
     if manual_content is not None:
@@ -230,6 +243,46 @@ async def parse_cv_upload(file: UploadFile = File(...), current_profile: Optiona
     except Exception as e:
         print(f"ERREUR dans /parse-cv-upload : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'analyse du CV : {str(e)}")
+
+@app.post("/analyze-feedback")
+def analyze_feedback_endpoint(request: FeedbackRequest):
+    _check_gemini_key_is_present(None)
+    try:
+        return service.analyze_feedback(
+            request.job_title,
+            request.company,
+            api_key=GEMINI_API_KEY,
+            model_name=GEMINI_MODEL_NAME
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/timing-strategy")
+def timing_strategy_endpoint(request: TimingRequest):
+    _check_gemini_key_is_present(None)
+    try:
+        return service.generate_timing_strategy(
+            request.stats,
+            request.user_role,
+            api_key=GEMINI_API_KEY,
+            model_name=GEMINI_MODEL_NAME
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/search-contacts")
+def search_contacts_endpoint(request: ContactSearchRequest):
+    _check_gemini_key_is_present(None)
+    try:
+        return service.search_contacts(
+            request.company,
+            request.job_title,
+            request.excluded_names,
+            api_key=GEMINI_API_KEY,
+            model_name=GEMINI_MODEL_NAME
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

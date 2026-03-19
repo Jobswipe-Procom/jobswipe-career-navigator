@@ -19,7 +19,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/lib/supabaseClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 
 type ApplicationStatus = "imported" | "liked" | "superliked" | "applied" | "interview" | "job_offer" | "accepted" | "rejected";
@@ -47,6 +46,8 @@ interface Application {
     rejected?: Date;
   };
 }
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8082";
 
 const initialApplications: Application[] = [];
 
@@ -483,26 +484,29 @@ const ApplicationDashboard: React.FC = () => {
     setAnalyzingId(app.id);
     setFeedbackAnalysis(null);
 
-    // Simulation de l'appel API vers le backend Python (à connecter réellement)
-    // const response = await fetch('/api/analyze-feedback', { method: 'POST', body: JSON.stringify({ jobId: app.id }) });
-    
-    setTimeout(() => {
-        setFeedbackAnalysis({
-            analysis: `L'analyse de votre candidature pour ${app.company} suggère que votre profil correspond à environ 70% des attentes. Les compétences techniques principales sont présentes, mais l'expérience sectorielle semble faire défaut par rapport aux exigences probables du poste.`,
-            potential_reasons: [
-                "Manque d'expérience spécifique dans le secteur de l'entreprise",
-                "Compétences sur les outils propriétaires non mentionnées dans le CV",
-                "Le poste nécessitait peut-être une disponibilité immédiate ou une mobilité géographique différente"
-            ],
-            improvement_tips: [
-                "Se renseigner sur les outils spécifiques au secteur de " + app.company + " et les ajouter au CV si connus",
-                "Mettre en avant l'adaptabilité et la capacité d'apprentissage rapide dans la lettre de motivation",
-                "Valoriser les projets personnels pertinents pour combler le manque d'expérience directe"
-            ],
-            email_template: `Objet : Candidature au poste de ${app.title} - Demande de feedback\n\nMadame, Monsieur,\n\nJe vous remercie de m'avoir informé de l'état de ma candidature pour le poste de ${app.title}.\n\nBien que déçu de ne pas poursuivre le processus, je reste très intéressé par votre entreprise et son secteur d'activité. Dans une démarche d'amélioration continue, auriez-vous la possibilité de me partager brièvement les éléments qui ont motivé cette décision ?\n\nCela me serait très précieux pour identifier mes axes de progression pour de futures opportunités.\n\nEn vous remerciant par avance pour votre temps,\n\nCordialement,`
-        });
+    try {
+      const response = await fetch(`${API_BASE_URL}/analyze-feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_title: app.title,
+          company: app.company
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de l'analyse du feedback");
+      }
+
+      const data = await response.json();
+      setFeedbackAnalysis(data);
+
+    } catch (error) {
+      console.error("Erreur feedback:", error);
+      toast.error("Impossible d'analyser le feedback pour le moment.");
+    } finally {
         setAnalyzingId(null);
-    }, 2500);
+    }
   };
 
   const handleTimingAnalysis = async () => {
@@ -531,50 +535,18 @@ const ApplicationDashboard: React.FC = () => {
     };
 
     try {
-        const apiKey = import.meta.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            toast.error("Clé API Gemini manquante dans la configuration.");
-            throw new Error("Clé API Gemini manquante");
-        }
+        const response = await fetch(`${API_BASE_URL}/timing-strategy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stats: { ...offerDetailsStats, ...trackingStats },
+            user_role: userRole
+          })
+        });
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = import.meta.env.GEMINI_MODEL_NAME;
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const prompt = `
-Tu es un expert en stratégie de recherche d'emploi.
-Analyse les statistiques suivantes pour un candidat au poste de "${userRole}" :
-
-STATISTIQUES :
-- Offres en attente (Likées/Superlikées) : ${offerDetailsStats.total_potential}
-- Candidatures envoyées : ${trackingStats.applied}
-- Processus actifs : ${trackingStats.active_processes}
-- Entretiens obtenus : ${trackingStats.interviews}
-
-TA MISSION :
-Fournir une stratégie de timing optimale au format JSON.
-
-FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
-{
-  "best_days": [1, 2, 4], // Jours recommandés (0=Dimanche, 1=Lundi, ..., 6=Samedi)
-  "best_time_range": "Matin entre 08h30 et 10h00",
-  "reasoning": "Explication courte de la stratégie.",
-  "action_plan": [
-    { "day_offset": 0, "action": "Action pour aujourd'hui" },
-    { "day_offset": 1, "action": "Action pour demain" },
-    { "day_offset": 3, "action": "Action pour dans 3 jours" }
-  ],
-  "general_tip": "Un conseil court."
-}
-`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        if (!response.ok) throw new Error("Erreur serveur timing");
         
-        // Nettoyage du markdown si présent
-        const jsonString = text.replace(/```json\n?|```/g, '').trim();
-        const data = JSON.parse(jsonString);
+        const data = await response.json();
 
         setTimingAnalysis(data);
         
@@ -591,6 +563,7 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
         }
     } catch (error) {
         console.error("Erreur Gemini:", error);
+        toast.error("Erreur lors de la génération de la stratégie.");
     } finally {
         setIsTimingLoading(false);
     }
@@ -604,66 +577,25 @@ FORMAT DE RÉPONSE ATTENDU (JSON uniquement) :
 
     // Capture existing names for exclusion BEFORE clearing state
     const existingNames = contactSearchResults?.map(c => c.nom) || [];
-    const exclusionPrompt = existingNames.length > 0 
-      ? `IMPORTANT : Ne propose PAS les profils suivants que j'ai déjà vus : ${existingNames.join(", ")}. Trouve 5 personnes DIFFÉRENTES.` 
-      : "";
 
     setIsContactSearching(true);
     setContactSearchError(null);
     setContactSearchResults(null);
 
     try {
-      const apiKey = import.meta.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        toast.error("Clé API Gemini manquante dans la configuration.");
-        setIsContactSearching(false);
-        return;
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: import.meta.env.GEMINI_MODEL_NAME,
-        tools: [{ googleSearch: {} }] 
+      const response = await fetch(`${API_BASE_URL}/search-contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: app.company,
+          job_title: app.title,
+          excluded_names: existingNames
+        })
       });
 
-      const prompt = `
-        Objectif : Trouver des contacts pertinents chez ${app.company} pour le poste de ${app.title}.
-        
-        Instructions :
-        1. Utilise Google Search pour identifier exactement 5 profils réels actuels chez ${app.company}.
-        ${exclusionPrompt}
-        2. Structure de la réponse (Ordre IMPÉRATIF) :
-           - Les 3 premiers profils doivent être des opérationnels (pairs, seniors, managers) travaillant dans le département lié à ${app.title}.
-           - Les 2 derniers profils doivent être des RH avec l'intitulé "Talent Acquisition" ou "Ressources Humaines".
-        3. Pour chaque profil, extrais ou déduis :
-           - Nom complet
-           - Intitulé exact du poste
-           - Email professionnel (si introuvable, propose le format le plus probable ex: prenom.nom@entreprise.com)
-           - Une courte bio (1 phrase sur leur parcours ou rôle actuel)
-        4. Génère un message d'approche (custom_mail_body) :
-           - Court (2-3 phrases)
-           - Ultra-personnalisé (mentionne leur rôle ou un détail spécifique)
-           - Demande conseil sur le poste de ${app.title}
-        
-        Format de sortie STRICT (JSON uniquement, pas de markdown) :
-        [
-          {
-            "nom": "Prénom Nom",
-            "poste": "Intitulé du poste",
-            "email": "email@entreprise.com",
-            "is_rh": true, // true uniquement pour les profils RH/Talent Acquisition
-            "detail_bio": "...",
-            "custom_mail_body": "..."
-          }
-        ]
-      `;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      if (!response.ok) throw new Error("Erreur lors de la recherche");
       
-      const jsonString = text.replace(/```json\n?|```/g, '').trim();
-      const data = JSON.parse(jsonString);
+      const data = await response.json();
       
       if (Array.isArray(data)) {
         setContactSearchResults(data);

@@ -15,6 +15,7 @@ try:
     from .experience_generator import generate_full_cv_content
     from .cv_generator import generate_cv_html, convert_html_to_pdf
     from .cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf, build_cover_letter_html_from_chunks
+    from .dashboard_advisor import analyze_feedback, generate_timing_strategy, search_contacts
 except ImportError:
     from cv_parsing import parse_cv_with_gemini, extract_text_from_file
     from job_offer_parser import parse_job_offer_gemini
@@ -22,6 +23,7 @@ except ImportError:
     from experience_generator import generate_full_cv_content
     from cv_generator import generate_cv_html, convert_html_to_pdf
     from cover_letter_generator import generate_personalized_cover_letter_docx_and_pdf, build_cover_letter_html_from_chunks
+    from dashboard_advisor import analyze_feedback, generate_timing_strategy, search_contacts
 
 def _get_first_or_default(items: Optional[List[Any]], default: Any = "") -> Any:
     """Helper pour récupérer le premier élément d'une liste ou une valeur par défaut."""
@@ -224,3 +226,12 @@ class JobSwipeGeneratorService:
         """
         cv_text = extract_text_from_file(file_content, filename)
         return self.parse_only_cv(cv_text, api_key=api_key, model_name=model_name, current_profile=current_profile)
+
+    def analyze_feedback(self, job_title: str, company: str, api_key: str, model_name: str) -> Dict[str, Any]:
+        return analyze_feedback(job_title, company, api_key=api_key, model_name=model_name)
+
+    def generate_timing_strategy(self, stats: Dict[str, Any], user_role: str, api_key: str, model_name: str) -> Dict[str, Any]:
+        return generate_timing_strategy(stats, user_role, api_key=api_key, model_name=model_name)
+
+    def search_contacts(self, company: str, job_title: str, excluded_names: List[str], api_key: str, model_name: str) -> List[Dict[str, Any]]:
+        return search_contacts(company, job_title, excluded_names, api_key=api_key, model_name=model_name)
