@@ -746,7 +746,7 @@ const ApplicationDashboard: React.FC = () => {
         description="Suivez vos candidatures en temps réel"
         noindex={true}
       />
-      <div className="h-screen overflow-hidden p-4 lg:p-8 pb-48">
+      <div className="h-screen overflow-y-auto p-4 lg:p-8 pb-48">
         <div className="fixed top-4 right-4 z-50 flex gap-3">
           <button
             onClick={() => navigate("/jobswipe/offres")}
