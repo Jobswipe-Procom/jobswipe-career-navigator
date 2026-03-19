@@ -12,6 +12,12 @@ load_dotenv()
 # 1. CONFIGURATION GEMINI
 # ============================================================================
 
+# Récupération de la clé API depuis les variables d'environnement
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Récupération du nom du modèle (avec une valeur par défaut si non définie)
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME")
+
 # ============================================================================
 # 2. UTILITAIRES
 # ============================================================================
@@ -131,5 +137,5 @@ if __name__ == "__main__":
     }
 
     print("--- Sélection intelligente du contenu ---")
-    result = select_all_relevant_content(offer_demo, user_data_demo)
+    result = select_all_relevant_content(offer_demo, user_data_demo, api_key=GEMINI_API_KEY, model_name=GEMINI_MODEL_NAME)
     print(json.dumps(result, indent=2, ensure_ascii=False))
