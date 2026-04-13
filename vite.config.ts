@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/jobswipe-career-navigator/",
+  base: mode === "production" ? "/jobswipe-career-navigator/" : "/",
   server: {
     host: "::",
     port: 8080,

@@ -59,12 +59,10 @@ cors_allow_headers = [
 # CORS : doit être le premier middleware ajouté pour envelopper toutes les réponses (y compris prévol OPTIONS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permettre toutes les origines (le regex gère les 192.168.1.x)
-    allow_origin_regex=allow_origin_regex,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=cors_allow_headers,
-    expose_headers=["*"],
+    allow_headers=["*"],
 )
 
 # Initialisation du service
